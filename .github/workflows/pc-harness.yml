@@ -20,6 +20,8 @@ jobs:
           sparse-checkout: |
             xbox_leak_may_2020/pc_port
           sparse-checkout-cone-mode: true
+      - name: Test PE32 image inspector
+        run: python3 -m unittest discover -s xbox_leak_may_2020/pc_port -p 'test_*.py' -v
       - name: Install toolchain and emulator
         run: |
           sudo apt-get update
