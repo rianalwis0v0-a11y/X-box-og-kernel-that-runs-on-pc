@@ -39,6 +39,8 @@ int main(void) {
 
     assert(!pc_paging_init(&paging, directory, 0x00100000u,
                            tables, 0x00100800u, 4u));
+    assert(!pc_paging_init(&paging, directory, 0x00100000u,
+                           directory, 0x00200000u, 4u));
 
     assert(pc_paging_init(&paging, directory, 0x00100000u,
                           tables, 0x00101000u, 1u));
