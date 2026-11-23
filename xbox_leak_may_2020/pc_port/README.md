@@ -25,9 +25,9 @@ The GitHub Actions workflow builds the ELF, checks its Multiboot header, boots i
 
 ## Xbox kernel boot-chain integration (first step)
 
-The harness now accepts an `xboxkrnl.exe` Multiboot module and validates its PE32/i386 headers, entry RVA, image/header sizes, section table, and section raw/virtual ranges. Pass the module to GRUB with the module name exactly `xboxkrnl.exe`. The serial log reports the preferred image base, entry RVA, image size, and section count.
+The harness accepts an `xboxkrnl.exe` Multiboot module and validates its PE32/i386 headers, entry RVA, image/header sizes, section table, and section raw/virtual ranges. The standalone PE32 mapper copies headers/sections into caller-provided memory and applies HIGHLOW base relocations. It rejects images with import, TLS, or delay-import directories because their startup handling is not implemented. Pass the module to GRUB with the module name exactly `xboxkrnl.exe`.
 
-This is deliberately a validation milestone, not a kernel launch: it does not yet map sections, apply PE relocations, resolve imports, initialize the Xbox kernel's expected boot parameters/crypt-key ABI, or jump to its entry point. The original Xbox `preldr32` depends on Xbox ROM/MCPX key material and cannot run unchanged on a PC. The next port step is a PC-native replacement for the ROM-loading portion of `bldr32`, while preserving the original kernel image and its own XBE loader.
+This remains a loader milestone, not a kernel launch. The page-table builder is tested but paging is not enabled, physical memory is not allocated/reserved, Xbox virtual aliases are not established, and the entry is not called. The source-defined entry is `__cdecl main(LoadOptions, CryptKeys)`; valid load-options and original crypt-key buffers must be supplied. The original Xbox `preldr32` depends on Xbox ROM/MCPX key material and cannot run unchanged on a PC.
 
 ## Native PC HAL primitives (new foundation)
 
@@ -54,3 +54,8 @@ CI compiles this parser as a 32-bit freestanding C++ translation unit. It is not
 The source-defined Xbox kernel entry is `__cdecl main(PUCHAR LoadOptions, const UCHAR *CryptKeys)`; see `xbox_pc_kernel_entry` in `xbox_pc_boot.h`. The port must provide valid load-options and crypt-key buffers before invoking it. It must not invent EEPROM/certificate key contents.
 
 The PE32 validator rejects images with import, TLS, or delay-import directories until their startup handling is implemented. The mapper only supports HIGHLOW base relocations. A successful map is still not permission to execute: physical allocation, page permissions, memory aliases, kernel globals, boot parameters, and hardware initialization remain prerequisites.
+
+
+## PC page-table builder
+
+`pc_paging.c/.h` implements a non-PAE 32-bit 4 KiB page-table builder over caller-provided, aligned directory and table storage. It supports explicit virtual-to-physical mappings and supervisor/user plus read-write flags. The CI tests verify translation, permission flags, conflict rejection, alignment/overflow checks, and atomic failure when page-table capacity is insufficient. It does not allocate physical memory or activate CR0.PG.
