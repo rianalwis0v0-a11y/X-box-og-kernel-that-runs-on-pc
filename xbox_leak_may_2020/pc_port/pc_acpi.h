@@ -36,6 +36,10 @@ typedef struct pc_acpi_madt_info {
     pc_acpi_iso overrides[PC_ACPI_MAX_ISO];
 } pc_acpi_madt_info;
 
+/* Search a firmware-provided region on 16-byte boundaries for a valid RSDP. */
+int PcAcpiFindRsdp(const void *region, size_t available,
+                   pc_acpi_rsdp_info *out, size_t *out_offset);
+
 /* Validate checksums and lengths before exposing firmware-provided addresses. */
 int PcAcpiValidateRsdp(const void *data, size_t available,
                        pc_acpi_rsdp_info *out);
