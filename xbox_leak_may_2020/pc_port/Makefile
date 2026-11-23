@@ -26,4 +26,4 @@ pc-harness.elf: boot.o kernel.o xbox_pc_boot.o linker.ld
 	@file $@
 
 clean:
-	rm -f boot.o kernel.o pc-harness.elf
+	rm -f boot.o kernel.o xbox_pc_boot.o pc-harness.elf
