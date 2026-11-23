@@ -2,6 +2,7 @@
 #include "xbox_pc_boot.h"
 #include "pc_idt.h"
 #include "pc_gdt.h"
+#include "pc_irq.h"
 
 #define COM1 0x3F8u
 #define MULTIBOOT_BOOTLOADER_MAGIC 0x2BADB002u
@@ -166,6 +167,13 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
     report_cpu();
     report_memory(info);
     report_pci();
+    serial_write("PC-HAL: starting PIT IRQ0 timer self-test\n");
+    PcIrqInstallPit(100u);
+    PcIrqWaitForTicks(5u);
+    PcIrqStop();
+    serial_write("PC-HAL: PIT IRQ0 self-test PASS ticks=");
+    serial_hex(PcIrqTicks());
+    serial_write("\n");
     serial_write("PC-HARNESS: native PC HAL probe PASS\n");
     {
         xbox_pc_kernel_image image;
