@@ -68,3 +68,10 @@ The PE32 validator now checks power-of-two file/section alignment, header/image 
 pc_physmem.c/.h adds a caller-bitmap-backed 4 KiB page allocator for physical addresses below 4 GiB. It imports the variable-length Multiboot memory map, admits only complete pages inside usable RAM, gives overlapping reserved entries priority, supports explicit unaligned reservations, and never allocates page zero. Its native tests and a freestanding 32-bit compile check run in CI.
 
 This allocator is not yet wired into the boot harness. The boot code must reserve its own image/stack, Multiboot information and module buffers, page-table storage, and device/firmware ranges before using it.
+
+
+## Physical allocator in the boot harness
+
+The Multiboot harness now links the physical allocator and exercises it after reserving the complete kernel image, the Multiboot v1 information block and memory map, command-line storage, module descriptors/payloads/names, low memory, VGA, and local/IO APIC windows. It allocates one page and reports its physical address over serial. The linker exports kernel start/end bounds so the full image (including stack and allocator bitmap) is reserved.
+
+This is still a reservation/allocator self-test. The allocated page is not yet used as a page table; paging remains disabled until all mappings and the Xbox address-space contract are verified.
