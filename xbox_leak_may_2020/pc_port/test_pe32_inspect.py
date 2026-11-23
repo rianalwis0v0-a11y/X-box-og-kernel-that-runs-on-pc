@@ -42,13 +42,13 @@ class PE32Tests(unittest.TestCase):
 
     def test_rejects_entry_outside_executable_section(self):
         b = bytearray(fixture())
-        struct.pack_into("<I", b, 0x84+24+16, 0x1800)
+        struct.pack_into("<I", b, 0x84+20+16, 0x1800)
         with self.assertRaisesRegex(PEError, "entry point is not inside"):
             inspect_pe32(bytes(b))
 
     def test_rejects_truncated_section_raw_data(self):
         b = bytearray(fixture())
-        struct.pack_into("<I", b, 0x84+24+224+20, 0x1000)
+        struct.pack_into("<I", b, 0x84+20+224+20, 0x1000)
         with self.assertRaisesRegex(PEError, "raw data"):
             inspect_pe32(bytes(b))
 
