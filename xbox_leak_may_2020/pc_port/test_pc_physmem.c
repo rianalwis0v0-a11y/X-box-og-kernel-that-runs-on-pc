@@ -5,7 +5,7 @@
 #include "pc_physmem.h"
 
 static uint8_t bitmap[PC_PHYSMEM_BITMAP_BYTES];
-static uint8_t mmap_bytes[48];
+static uint8_t mmap_bytes[72];
 
 static void put32(uint32_t o, uint32_t v) {
     mmap_bytes[o]=(uint8_t)v; mmap_bytes[o+1]=(uint8_t)(v>>8);
@@ -23,19 +23,21 @@ int main(void) {
     memset(mmap_bytes,0,sizeof(mmap_bytes));
     entry(0,0x00100000u,0x00400000u,1u); /* 1–5 MiB usable */
     entry(24,0x00200000u,0x00002000u,2u); /* reserved overlap wins */
-    assert(pc_physmem_init(&memory,bitmap,sizeof(bitmap),mmap_bytes,48u));
+    entry(48,UINT64_MAX-2u,1u,1u); /* must not wrap into low physical memory */
+    assert(pc_physmem_init(&memory,bitmap,sizeof(bitmap),mmap_bytes,72u));
     assert(memory.free_pages == (1024u - 2u));
+    assert(pc_physmem_alloc_page(&memory) == 0x00100000u);
     assert(pc_physmem_reserve(&memory,0x00100000u,0x2001u));
-    assert(memory.free_pages == 1019u);
-    page=pc_physmem_alloc_page(&memory);
-    assert(page == 0x00103000u);
     assert(memory.free_pages == 1018u);
-    assert(pc_physmem_reserve(&memory,0x00103000u,0x1000u));
-    assert(memory.free_pages == 1018u); /* already allocated */
-    assert(pc_physmem_alloc_page(&memory) == 0x00104000u);
+    page=pc_physmem_alloc_page(&memory);
+    assert(page == 0x00104000u);
+    assert(memory.free_pages == 1017u);
+    assert(pc_physmem_reserve(&memory,0x00104000u,0x1000u));
+    assert(memory.free_pages == 1017u); /* already allocated */
+    assert(pc_physmem_alloc_page(&memory) == 0x00105000u);
 
     /* Malformed/truncated map must fail closed and expose no free pages. */
-    assert(!pc_physmem_init(&memory,bitmap,sizeof(bitmap),mmap_bytes,47u));
+    assert(!pc_physmem_init(&memory,bitmap,sizeof(bitmap),mmap_bytes,71u));
     assert(memory.free_pages == 0u);
     assert(pc_physmem_alloc_page(&memory) == 0u);
     assert(!pc_physmem_reserve(&memory,UINT64_MAX-4u,16u));
