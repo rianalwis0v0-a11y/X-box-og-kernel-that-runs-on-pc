@@ -44,7 +44,7 @@ static int name_is_kernel(const char *s) {
     return 0;
 }
 
-static int validate_pe32(const uint8_t *f, uint32_t n,
+int xbox_pc_validate_pe32_file(const uint8_t *f, uint32_t n,
                          xbox_pc_kernel_image *out) {
     uint32_t pe, opt, sec, i, image_size, headers_size, entry, base;
     uint32_t section_table_size, section_table_end;
@@ -127,7 +127,7 @@ int xbox_pc_find_kernel_module(uint32_t magic, uint32_t info_address,
         size = mods[i].end - mods[i].start;
         if (!name_is_kernel((const char *)(uintptr_t)mods[i].string))
             continue;
-        if (!validate_pe32((const uint8_t *)(uintptr_t)mods[i].start,
+        if (!xbox_pc_validate_pe32_file((const uint8_t *)(uintptr_t)mods[i].start,
                            size, out))
             return XBOX_PC_BOOT_BAD_PE;
         return XBOX_PC_BOOT_OK;
