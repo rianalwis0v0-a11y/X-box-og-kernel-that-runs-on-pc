@@ -15,12 +15,11 @@ static void io_wait(void) { outb(0x80u, 0u); }
 void PcIrqInstallPit(uint32_t frequency_hz)
 {
     uint32_t divisor;
-    uint32_t flags;
     if (frequency_hz < 19u) frequency_hz = 19u;
     if (frequency_hz > PIT_INPUT_HZ) frequency_hz = PIT_INPUT_HZ;
     divisor = PIT_INPUT_HZ / frequency_hz;
     if (!divisor) divisor = 1u;
-    __asm__ volatile ("pushfl; popl %0; cli" : "=r"(flags) :: "memory");
+    __asm__ volatile ("cli" ::: "memory");
     /* ICW1: initialize cascaded 8259 PICs. */
     outb(PIC1_DATA, 0xffu); outb(PIC2_DATA, 0xffu);
     outb(PIC1_CMD, 0x11u); io_wait();
@@ -39,7 +38,7 @@ void PcIrqInstallPit(uint32_t frequency_hz)
     /* Only IRQ0 is enabled; all other legacy IRQs stay masked. */
     outb(PIC1_DATA, 0xfeu);
     outb(PIC2_DATA, 0xffu);
-    if (flags & 0x200u) __asm__ volatile ("sti" ::: "memory");
+    __asm__ volatile ("sti" ::: "memory");
 }
 uint32_t PcIrqTicks(void) { return g_ticks; }
 void PcIrqWaitForTicks(uint32_t target)
