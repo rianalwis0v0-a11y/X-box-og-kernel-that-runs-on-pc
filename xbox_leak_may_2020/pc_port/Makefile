@@ -15,7 +15,7 @@ check-tools:
 boot.o: boot.S | check-tools
 	$(AS) $(CFLAGS) -c $< -o $@
 
-kernel.o: kernel.c xbox_pc_boot.h pc_idt.h pc_gdt.h pc_irq.h pc_paging.h pc_physmem.h pc_hal_native.h pc_pci.h | check-tools
+kernel.o: kernel.c xbox_pc_boot.h pc_idt.h pc_gdt.h pc_irq.h pc_paging.h pc_physmem.h pc_hal_native.h pc_pci.h pc_acpi.h | check-tools
 	$(CC) $(CFLAGS) -c $< -o $@
 
 pc_paging.o: pc_paging.c pc_paging.h | check-tools
@@ -48,9 +48,12 @@ pc_hal_native.o: pc_hal_native.c pc_hal_native.h | check-tools
 pc_pci.o: pc_pci.c pc_pci.h | check-tools
 	$(CC) $(CFLAGS) -c $< -o $@
 
-pc-harness.elf: boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_pci.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o linker.ld
-	$(LD) $(LDFLAGS) -o $@ boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_pci.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o
+pc_acpi.o: pc_acpi.c pc_acpi.h | check-tools
+	$(CC) $(CFLAGS) -c $< -o $@
+
+pc-harness.elf: boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_pci.o pc_acpi.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o linker.ld
+	$(LD) $(LDFLAGS) -o $@ boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_pci.o pc_acpi.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o
 	@file $@
 
 clean:
-	rm -f boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_pci.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o pc-harness.elf
+	rm -f boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_pci.o pc_acpi.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o pc-harness.elf
