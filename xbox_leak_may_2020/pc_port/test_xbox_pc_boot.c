@@ -12,6 +12,10 @@ static void put32(uint32_t o, uint32_t v) {
     image[o]=(uint8_t)v; image[o+1]=(uint8_t)(v>>8);
     image[o+2]=(uint8_t)(v>>16); image[o+3]=(uint8_t)(v>>24);
 }
+static uint32_t get32(const uint8_t *p) {
+    return (uint32_t)p[0] | ((uint32_t)p[1]<<8) |
+           ((uint32_t)p[2]<<16) | ((uint32_t)p[3]<<24);
+}
 static void make_image(void) {
     const uint32_t pe=0x80, coff=pe+4, opt=coff+20, sec=opt+224;
     memset(image,0,sizeof(image));
@@ -71,10 +75,10 @@ int main(void) {
                                        0x80010000u,&entry));
         assert(entry==0x80011000u);
         assert(loaded[0x1000]==0x90);
-        assert(loaded[0x1004]==0x80123456u);
+        assert(get32(loaded+0x1004)==0x80123456u);
         assert(xbox_pc_load_pe32_image(&loaded_image,loaded,sizeof(loaded),
                                        0x81010000u,&entry));
-        assert(loaded[0x1004]==0x81123456u);
+        assert(get32(loaded+0x1004)==0x81123456u);
         put16(0x40a,0x5000); /* Unsupported relocation type must fail. */
         assert(xbox_pc_validate_pe32_file(image,sizeof(image),&loaded_image));
         assert(!xbox_pc_load_pe32_image(&loaded_image,loaded,sizeof(loaded),
