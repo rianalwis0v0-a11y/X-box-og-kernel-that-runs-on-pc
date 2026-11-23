@@ -37,7 +37,7 @@ xbox_pc_boot.o: xbox_pc_boot.c xbox_pc_boot.h | check-tools
 	$(CC) $(CFLAGS) -c $< -o $@
 
 pc-harness.elf: boot.o kernel.o xbox_pc_boot.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o linker.ld
-	$(LD) $(LDFLAGS) -o $@ boot.o kernel.o xbox_pc_boot.o pc_gdt.o pc_idt.o exception_stubs.o
+	$(LD) $(LDFLAGS) -o $@ boot.o kernel.o xbox_pc_boot.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o
 	@file $@
 
 clean:
