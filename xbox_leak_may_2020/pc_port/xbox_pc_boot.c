@@ -48,7 +48,7 @@ int xbox_pc_validate_pe32_file(const uint8_t *f, uint32_t n,
                          xbox_pc_kernel_image *out) {
     uint32_t pe, opt, sec, i, image_size, headers_size, entry, base;
     uint32_t section_table_size, section_table_end, directory_count;
-    uint32_t directory_bytes;
+    uint32_t directory_bytes, section_alignment, file_alignment;
     uint16_t sections, opt_size;
     int entry_executable = 0;
 
@@ -85,10 +85,21 @@ int xbox_pc_validate_pe32_file(const uint8_t *f, uint32_t n,
         return 0; /* IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT */
     entry = rd32(f + opt + 16u);
     base = rd32(f + opt + 28u);
+    section_alignment = rd32(f + opt + 32u);
+    file_alignment = rd32(f + opt + 36u);
     image_size = rd32(f + opt + 56u);
     headers_size = rd32(f + opt + 60u);
     if (!image_size || !headers_size || headers_size > n ||
-        headers_size > image_size || !entry || entry >= image_size) return 0;
+        headers_size > image_size || !entry || entry >= image_size ||
+        !section_alignment || !file_alignment ||
+        (section_alignment & (section_alignment - 1u)) ||
+        (file_alignment & (file_alignment - 1u)) ||
+        file_alignment < 0x200u || file_alignment > 0x10000u ||
+        section_alignment < file_alignment ||
+        (section_alignment < 0x1000u &&
+         section_alignment != file_alignment) ||
+        (image_size & (section_alignment - 1u)) ||
+        (headers_size & (file_alignment - 1u))) return 0;
 
     sec = opt + opt_size;
     section_table_size = (uint32_t)sections * 40u;
@@ -103,10 +114,24 @@ int xbox_pc_validate_pe32_file(const uint8_t *f, uint32_t n,
         uint32_t characteristics = rd32(s + 36u);
         uint32_t extent = vsize > raw_size ? vsize : raw_size;
 
+        uint32_t j;
         if (raw_size &&
-            (raw < headers_size || !span_ok(raw, raw_size, n))) return 0;
-        if (extent && (va > image_size || extent > image_size - va))
-            return 0;
+            (raw < headers_size || !span_ok(raw, raw_size, n) ||
+             (raw & (file_alignment - 1u)) ||
+             (raw_size & (file_alignment - 1u)))) return 0;
+        if (extent && (va > image_size || extent > image_size - va ||
+                       (va & (section_alignment - 1u)) ||
+                       va < headers_size)) return 0;
+        for (j = 0; j < i; ++j) {
+            const uint8_t *p = f + sec + j * 40u;
+            uint32_t pva = rd32(p + 12u), pv = rd32(p + 8u);
+            uint32_t pr = rd32(p + 20u), prs = rd32(p + 16u);
+            uint32_t pext = pv > prs ? pv : prs;
+            if (extent && pext && va < pva + pext && pva < va + extent)
+                return 0;
+            if (raw_size && prs && raw < pr + prs && pr < raw + raw_size)
+                return 0;
+        }
         if (entry >= va && entry - va < extent &&
             (characteristics & PE_SECTION_EXECUTE))
             entry_executable = 1;
