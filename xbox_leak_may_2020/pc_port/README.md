@@ -75,3 +75,8 @@ This allocator is not yet wired into the boot harness. The boot code must reserv
 The Multiboot harness now links the physical allocator and exercises it after reserving the complete kernel image, the Multiboot v1 information block and memory map, command-line storage, module descriptors/payloads/names, low memory, VGA, and local/IO APIC windows. It allocates one page and reports its physical address over serial. The linker exports kernel start/end bounds so the full image (including stack and allocator bitmap) is reserved.
 
 This is still a reservation/allocator self-test. The allocated page is not yet used as a page table; paging remains disabled until all mappings and the Xbox address-space contract are verified.
+
+
+## Physical memory and Xbox page-table layout
+
+The harness now initializes a 4 GiB-bounded physical-page bitmap from the Multiboot memory map, reserving the kernel, boot metadata, modules, low memory, and conventional MMIO windows. It allocates contiguous storage for one page directory and 128 page tables, then builds the source-verified 256 MiB identity mapping and the 0x80000000 alias with 4 KiB pages. Paging deliberately remains disabled; this validates the layout without jumping into the Xbox kernel or assuming PC MMIO is Xbox hardware.
