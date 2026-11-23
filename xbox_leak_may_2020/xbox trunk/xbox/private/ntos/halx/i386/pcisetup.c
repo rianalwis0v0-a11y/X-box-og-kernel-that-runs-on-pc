@@ -13,6 +13,9 @@ Abstract:
 --*/
 
 #include "halp.h"
+#ifdef PC_COMPAT_GUEST
+#include "pc_hal_guest.h"
+#endif
 #include <pci.h>
 
 #ifdef ALLOC_PRAGMA
@@ -24,6 +27,12 @@ HalpSetupPCIDevices(
     VOID
     )
 {
+#ifdef PC_COMPAT_GUEST
+    /* Host PCI is enumerated and virtualized by the PC monitor. The Xbox
+       MCPX/LPC/IDE/NIC/USB/audio/AGP register map must never touch host PCI. */
+    return;
+#else
+
     PCI_SLOT_NUMBER PCISlotNumber;
     PCI_COMMON_CONFIG Configuration;
     ULONG interrupt;
@@ -273,4 +282,5 @@ HalpSetupPCIDevices(
     agpcmd = 0x4 | 0x010 | 0x100;
 
     HalWritePCISpace(1, PCISlotNumber.u.AsULONG, 0x4C, &agpcmd, sizeof(agpcmd));
+#endif
 }
