@@ -40,7 +40,7 @@ jobs:
       - name: Install toolchain and emulator
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-multilib grub-common grub-pc-bin qemu-system-x86
+          sudo apt-get install -y gcc-multilib g++-multilib grub-common grub-pc-bin qemu-system-x86
       - name: Compile freestanding XboxRuntime XBE parser for 32-bit target
         run: g++ -m32 -std=c++17 -ffreestanding -fno-exceptions -fno-rtti -fno-builtin -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port -fsyntax-only xbox_leak_may_2020/pc_port/xbe_format.cpp
       - name: Compile native PC Xbox kernel module validator
