@@ -15,6 +15,9 @@ Abstract:
 --*/
 
 #include "halp.h"
+#ifdef PC_COMPAT_GUEST
+#include "pc_hal_guest.h"
+#endif
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text(INIT, HalInitSystemPhase0)
@@ -41,6 +44,15 @@ Return Value:
 
 --*/
 {
+#ifdef PC_COMPAT_GUEST
+    /*
+     * The PC monitor owns the physical APIC, interrupt routing, timer and
+     * PCI host bridge. Do not execute Xbox MCPX/LPC/PIC initialization here.
+     */
+    if (!PcHalInitializePlatform()) {
+        KeBugCheck(0x50434841); /* PC HAL handshake failed */
+    }
+#else
     ULONGLONG ApicBits;
 
     _outp(0x61, 0x08);
@@ -104,6 +116,7 @@ Return Value:
 
     HalPulseHardwareMonitorPin();
     HalpInitializeSystemControlInterrupt();
+#endif
 }
 
 VOID
