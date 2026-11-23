@@ -86,6 +86,7 @@ jobs:
           status=$?
           set -e
           cat qemu.log
+          grep -F "PC-HAL: VGA text-mode boot animation rendered" qemu.log
           grep -F "PC-HAL: flat GDT installed" qemu.log
           grep -F "PC-HAL: exception IDT installed (vectors 0-31)" qemu.log
           grep -F "PC-HARNESS: entered 32-bit bare-metal kernel" qemu.log
