@@ -28,3 +28,10 @@ The GitHub Actions workflow builds the ELF, checks its Multiboot header, boots i
 This proves only the standalone native PC harness and its early hardware probes. It does **not** load or boot the original Xbox kernel. The Xbox kernel still needs a verified PE32 loader/relocation/import path, its exact boot handoff, native replacement implementations for Xbox-specific HAL services, and integration of the NV2A translation layer. The existing `PC_COMPAT_GUEST` VMCALL adapter is a separate hypervisor-guest experiment; it is not used by this bare-metal harness.
 
 Do not flash this test ELF to a physical disk or firmware. Test it in QEMU first; use removable media only after the boot image and hardware paths are validated.
+
+
+## XboxRuntime code reuse: XBE parser
+
+The portable `xbe_format.h/.cpp` parser and image-layout routine were copied from [rianalwis0v0-a11y/XboxRuntime](https://github.com/rianalwis0v0-a11y/XboxRuntime/tree/main/modules/xbe_loader). The source MIT license is preserved in `XBOXRUNTIME_LICENSE.txt`. This code validates XBE metadata and maps headers/sections into a caller-provided buffer; it does not perform disk I/O, relocation, kernel-thunk import resolution, TLS execution, or kernel entry.
+
+CI compiles this parser as a 32-bit freestanding C++ translation unit. It is not linked into the boot harness yet: the next step is a physical-storage reader and a bounded allocator/memory-map reservation, then a verified XBE-to-kernel boot handoff. Windows-only runtime files and the Windows guest execution backend were intentionally not copied into the bare-metal kernel.
