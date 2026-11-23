@@ -21,6 +21,14 @@ int main(void) {
     assert(directory[0x300] & PC_PAGING_USER);
     assert(pc_paging_translate(&paging, 0xc0003000u, &physical, &flags));
     assert(physical == 0x00203000u && flags == PC_PAGING_USER);
+
+    /* Device MMIO pages can be mapped with cache-disable attributes. */
+    assert(pc_paging_map(&paging, 0xc0400000u, 0xfec00000u,
+                         0x1000u, PC_PAGING_WRITE |
+                         PC_PAGING_PCD | PC_PAGING_PWT));
+    assert(pc_paging_translate(&paging, 0xc0400123u, &physical, &flags));
+    assert(physical == 0xfec00123u);
+    assert(flags == (PC_PAGING_WRITE | PC_PAGING_PCD | PC_PAGING_PWT));
     assert(!pc_paging_map(&paging, 0xc0000000u, 0x00300000u,
                           0x1000u, PC_PAGING_WRITE));
     assert(!pc_paging_map(&paging, 0xc0000001u, 0x00300000u,
