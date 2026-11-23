@@ -59,3 +59,12 @@ The PE32 validator rejects images with import, TLS, or delay-import directories 
 ## PC page-table builder
 
 `pc_paging.c/.h` implements a non-PAE 32-bit 4 KiB page-table builder over caller-provided, aligned directory and table storage. It supports explicit virtual-to-physical mappings and supervisor/user plus read-write flags. The CI tests verify translation, permission flags, conflict rejection, alignment/overflow checks, and atomic failure when page-table capacity is insufficient. It does not allocate physical memory or activate CR0.PG.
+
+
+## PE32 loader hardening and physical-page allocator
+
+The PE32 validator now checks power-of-two file/section alignment, header/image alignment, aligned section addresses and raw sizes, and rejects overlapping virtual or file-backed section ranges. Synthetic malformed-image tests cover these cases.
+
+pc_physmem.c/.h adds a caller-bitmap-backed 4 KiB page allocator for physical addresses below 4 GiB. It imports the variable-length Multiboot memory map, admits only complete pages inside usable RAM, gives overlapping reserved entries priority, supports explicit unaligned reservations, and never allocates page zero. Its native tests and a freestanding 32-bit compile check run in CI.
+
+This allocator is not yet wired into the boot harness. The boot code must reserve its own image/stack, Multiboot information and module buffers, page-table storage, and device/firmware ranges before using it.
