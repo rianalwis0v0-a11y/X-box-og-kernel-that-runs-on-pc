@@ -180,3 +180,17 @@ The mapper writes only to a caller-provided buffer. It does not allocate physica
 - [ ] Re-run CI after the follow-up hardening for caller-supplied metadata and relocation arithmetic (commits after `95628a5`).
 
 The QEMU pass is for the independent PC harness only. It does not load or execute the Xbox kernel image.
+
+
+### Stage 2 — PC page-table construction
+
+- [x] Add a bounded non-PAE 32-bit 4 KiB page-table builder with caller-owned aligned storage.
+- [x] Support virtual-to-physical ranges and supervisor/user plus read-write PTE flags.
+- [x] Reject address overflow, misalignment, conflicting aliases, and table exhaustion.
+- [x] Preflight mapping requests so rejected ranges do not partially modify page tables.
+- [ ] Add a physical page allocator that reserves the kernel, Multiboot structures, modules, and firmware/MMIO ranges.
+- [ ] Confirm the Xbox kernel's required virtual aliases and low-memory layout from its source before activating paging.
+- [ ] Enable paging only after all executing code, stack, page tables, and boot data are mapped.
+- [ ] Build the Xbox memory map and invoke the source-verified two-argument cdecl entry only after valid load-options and crypt-key buffers are available.
+
+The page-table builder is unit-tested infrastructure only; the PC harness does not enable paging yet.
