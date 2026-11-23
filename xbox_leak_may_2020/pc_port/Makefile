@@ -15,11 +15,14 @@ check-tools:
 boot.o: boot.S | check-tools
 	$(AS) $(CFLAGS) -c $< -o $@
 
-kernel.o: kernel.c | check-tools
+kernel.o: kernel.c xbox_pc_boot.h | check-tools
 	$(CC) $(CFLAGS) -c $< -o $@
 
-pc-harness.elf: boot.o kernel.o linker.ld
-	$(LD) $(LDFLAGS) -o $@ boot.o kernel.o
+xbox_pc_boot.o: xbox_pc_boot.c xbox_pc_boot.h | check-tools
+	$(CC) $(CFLAGS) -c $< -o $@
+
+pc-harness.elf: boot.o kernel.o xbox_pc_boot.o linker.ld
+	$(LD) $(LDFLAGS) -o $@ boot.o kernel.o xbox_pc_boot.o
 	@file $@
 
 clean:
