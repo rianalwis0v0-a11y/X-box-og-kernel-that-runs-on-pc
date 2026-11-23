@@ -108,8 +108,12 @@ static void report_memory(const multiboot_info_min *info) {
     }
     while (offset <= info->mmap_length &&
            info->mmap_length - offset >= sizeof(uint32_t)) {
-        const multiboot_mmap_entry *entry =
-            (const multiboot_mmap_entry *)(uintptr_t)(info->mmap_addr + offset);
+        const multiboot_mmap_entry *entry;
+        if (info->mmap_addr > UINT32_MAX - offset) {
+            serial_write("PC-HAL: memory map address overflow; stopping safely\n");
+            return;
+        }
+        entry = (const multiboot_mmap_entry *)(uintptr_t)(info->mmap_addr + offset);
         uint32_t step;
         if (entry->size < 20u || entry->size > UINT32_MAX - sizeof(entry->size)) {
             serial_write("PC-HAL: malformed memory map entry; stopping safely\n");
