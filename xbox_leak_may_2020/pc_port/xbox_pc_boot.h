@@ -9,6 +9,12 @@
 #define XBOX_PC_BOOT_BAD_HANDOFF 2
 #define XBOX_PC_BOOT_BAD_PE 3
 
+#if defined(_MSC_VER)\n#define XBOX_PC_CDECL __cdecl\n#elif defined(__i386__)\n#define XBOX_PC_CDECL __attribute__((cdecl))\n#else\n#define XBOX_PC_CDECL\n#endif
+
+/* Exact entry signature from xboxkrnl.c: main(LoadOptions, CryptKeys). */
+typedef void (XBOX_PC_CDECL *xbox_pc_kernel_entry)(uint8_t *load_options,
+                                                   const uint8_t *crypt_keys);
+
 typedef struct xbox_pc_kernel_image {
     const uint8_t *file;
     uint32_t file_size;
