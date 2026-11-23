@@ -125,6 +125,60 @@ int xbox_pc_validate_pe32_file(const uint8_t *f, uint32_t n,
 
 
 /*
+ * Validate every relocation before changing any target. The directory must
+ * reside wholly inside raw-backed bytes of one mapped section.
+ */
+static int process_relocations(uint8_t *image, uint32_t image_size,
+                               uint32_t reloc_rva, uint32_t reloc_size,
+                               uint32_t delta, int apply) {
+    uint32_t cursor = 0;
+    while (cursor < reloc_size) {
+        uint32_t block_rva, block_size, count, j;
+        if (reloc_size - cursor < 8u) return 0;
+        block_rva = rd32(image + reloc_rva + cursor);
+        block_size = rd32(image + reloc_rva + cursor + 4u);
+        if (block_size < 8u || block_size > reloc_size - cursor ||
+            ((block_size - 8u) & 1u) != 0 ||
+            block_rva >= image_size || (block_rva & 0xfffu) != 0)
+            return 0;
+        count = (block_size - 8u) / 2u;
+        for (j = 0; j < count; ++j) {
+            uint16_t item = rd16(image + reloc_rva + cursor + 8u + j * 2u);
+            uint16_t type = item >> 12;
+            uint32_t target, value;
+            if (type == 0u) continue;
+            if (type != 3u || block_rva > UINT32_MAX - (item & 0x0fffu))
+                return 0;
+            target = block_rva + (item & 0x0fffu);
+            if (!span_ok(target, 4u, image_size)) return 0;
+            if (apply) {
+                value = rd32(image + target) + delta;
+                image[target] = (uint8_t)value;
+                image[target + 1u] = (uint8_t)(value >> 8);
+                image[target + 2u] = (uint8_t)(value >> 16);
+                image[target + 3u] = (uint8_t)(value >> 24);
+            }
+        }
+        cursor += block_size;
+    }
+    return cursor == reloc_size;
+}
+
+static int rva_range_is_raw_backed(const uint8_t *f, uint32_t sec,
+                                   uint16_t sections, uint32_t rva,
+                                   uint32_t length) {
+    uint32_t i;
+    for (i = 0; i < sections; ++i) {
+        const uint8_t *s = f + sec + i * 40u;
+        uint32_t va = rd32(s + 12u), raw_size = rd32(s + 16u);
+        if (rva >= va && rva - va <= raw_size &&
+            length <= raw_size - (rva - va))
+            return 1;
+    }
+    return 0;
+}
+
+/*
  * Copy headers/sections to a caller-owned image buffer and apply PE32
  * IMAGE_REL_BASED_HIGHLOW relocations. Unsupported relocation types fail
  * closed. This is deliberately not an executable-memory allocator.
@@ -187,37 +241,17 @@ int xbox_pc_load_pe32_image(const xbox_pc_kernel_image *image,
         if (!reloc_rva || !reloc_size ||
             !span_ok(reloc_rva, reloc_size, image->image_size))
             return 0;
-        cursor = 0;
-        while (cursor < reloc_size) {
-            uint32_t block_rva, block_size, count, j;
-            if (reloc_size - cursor < 8u) return 0;
-            block_rva = rd32(destination + reloc_rva + cursor);
-            block_size = rd32(destination + reloc_rva + cursor + 4u);
-            if (block_size < 8u || block_size > reloc_size - cursor ||
-                ((block_size - 8u) & 1u) != 0 ||
-                block_rva >= image->image_size)
-                return 0;
-            count = (block_size - 8u) / 2u;
-            for (j = 0; j < count; ++j) {
-                uint16_t item = rd16(destination + reloc_rva + cursor + 8u + j * 2u);
-                uint16_t type = item >> 12;
-                uint32_t offset = item & 0x0fffu;
-                uint32_t target;
-                uint32_t value;
-                if (type == 0u) continue; /* IMAGE_REL_BASED_ABSOLUTE */
-                if (block_rva > UINT32_MAX - offset) return 0;
-                target = block_rva + offset;
-                if (type != 3u || !span_ok(target, 4u, image->image_size))
-                    return 0; /* Only IMAGE_REL_BASED_HIGHLOW is supported. */
-                value = rd32(destination + target);
-                value += delta;
-                destination[target] = (uint8_t)value;
-                destination[target + 1u] = (uint8_t)(value >> 8);
-                destination[target + 2u] = (uint8_t)(value >> 16);
-                destination[target + 3u] = (uint8_t)(value >> 24);
-            }
-            cursor += block_size;
-        }
+        if (!rva_range_is_raw_backed(f, sec, sections, reloc_rva,
+                                     reloc_size))
+            return 0;
+        /* First pass is validation-only: malformed later blocks cannot leave
+           earlier relocation targets partially modified. */
+        if (!process_relocations(destination, image->image_size, reloc_rva,
+                                 reloc_size, delta, 0))
+            return 0;
+        if (!process_relocations(destination, image->image_size, reloc_rva,
+                                 reloc_size, delta, 1))
+            return 0;
     }
     *entry_address = load_base + image->entry_rva;
     return 1;
