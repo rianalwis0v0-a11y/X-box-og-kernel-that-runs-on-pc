@@ -71,3 +71,10 @@ The next target should be a second-stage **PE32 image inspection and load-contra
 ## 5. Evidence required to advance
 
 For every milestone, record the source file and symbol, image hash, exact toolchain, build/test command, full output, and VM/hardware configuration. The first kernel-integration milestone is a PE32 validation report for a known kernel image, not kernel execution.
+
+
+## 6. PC-side implementation status for the original bldr32 paging layout
+
+The original startup assembly's first-stage layout is now represented by `pc_paging.c`: 256 MiB of identity mapping plus a second mapping of the same physical range at virtual `0x80000000`. The PC harness allocates the page directory and 128 page tables from its Multiboot-backed physical allocator and builds these entries using 4 KiB pages.
+
+This is intentionally not activated yet. The original bldr32 also maps Xbox ROM and NV2A register windows and enables PSE/FXSR/XMM support. A PC port must replace those device windows with PC/monitor-owned mappings and must not map host devices as if they were MCPX or NV2A. The builder currently creates only the low-memory and high-alias mappings; it does not execute the Xbox kernel.
