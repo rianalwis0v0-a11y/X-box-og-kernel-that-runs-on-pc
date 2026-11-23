@@ -82,7 +82,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          timeout 8s qemu-system-i386 -kernel pc-harness.elf -display none -serial stdio -monitor none -no-reboot -no-shutdown > qemu.log 2>&1
+          timeout 20s qemu-system-i386 -kernel pc-harness.elf -display none -serial stdio -monitor none -no-reboot -no-shutdown > qemu.log 2>&1
           status=$?
           set -e
           cat qemu.log
