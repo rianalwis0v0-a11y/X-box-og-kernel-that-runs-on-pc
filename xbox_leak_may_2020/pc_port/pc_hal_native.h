@@ -18,8 +18,22 @@ void PcHalNativeEnableInterrupts(void);
 /* Remap the dual 8259 PICs and leave every IRQ masked. */
 void PcHalNativePicRemapMasked(void);
 
-/* PCI Configuration Mechanism #1. Returns 0xffffffff for absent devices. */
+/*
+ * PCI Configuration Mechanism #1 (CF8/CFC).
+ * Invalid BDF/alignment reads return all-ones; invalid writes are ignored.
+ * These functions preserve the caller's IF state around each config cycle.
+ */
+uint8_t PcHalNativePciRead8(uint8_t bus, uint8_t device,
+                            uint8_t function, uint8_t offset);
+uint16_t PcHalNativePciRead16(uint8_t bus, uint8_t device,
+                              uint8_t function, uint8_t offset);
 uint32_t PcHalNativePciRead32(uint8_t bus, uint8_t device,
                               uint8_t function, uint8_t offset);
+void PcHalNativePciWrite8(uint8_t bus, uint8_t device, uint8_t function,
+                          uint8_t offset, uint8_t value);
+void PcHalNativePciWrite16(uint8_t bus, uint8_t device, uint8_t function,
+                           uint8_t offset, uint16_t value);
+void PcHalNativePciWrite32(uint8_t bus, uint8_t device, uint8_t function,
+                           uint8_t offset, uint32_t value);
 
 #endif
