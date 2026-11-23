@@ -76,3 +76,16 @@ The compatibility monitor maps these operations to the host PC. On a Windows hos
 4. Host completion updates the fence and raises the guest's virtual GPU interrupt.
 
 The platform ABI and NV2A bridge are compile-checked by CI. The new dispatcher now validates and consumes one shared-ring command at a time, bounds-checks pushbuffer references, and forwards supported operations through explicit host callbacks. It is a tested integration boundary, not a finished VMM, PCI device model, NV2A method decoder, linked translation provider, or rendered GPU output. The next executable milestone is the real pushbuffer decoder and connection to the existing NV2A state/shader translator, followed by a clear/triangle fence test.
+
+
+## Verified Xbox kernel entry contract (source inspection)
+
+The checked-in source `xbox trunk/xbox/private/ntos/init/xboxkrnl.c` defines the kernel entry as:
+
+```c
+VOID __cdecl main(PUCHAR LoadOptions, const UCHAR *CryptKeys);
+```
+
+The PC port now records this as the `xbox_pc_kernel_entry` function-pointer type. The first argument is the boot-loader options string; the second points to the two key blocks consumed by `RtlCopyMemory` in `main`. Their exact lengths and the required buffer layout must come from the matching `bldr.h` definitions and original boot-loader contract; this port does not fabricate key bytes or lengths.
+
+The PE32 loader now fails closed when import, TLS, or delay-import directories are present because no resolver/callback runner exists yet. This prevents treating a copied image as runnable when its startup dependencies have not been initialized.
