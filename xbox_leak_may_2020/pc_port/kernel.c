@@ -63,6 +63,45 @@ static inline uint32_t inl(uint16_t port) {
     __asm__ volatile ("inl %1, %0" : "=a"(value) : "Nd"(port));
     return value;
 }
+/* VGA text-mode splash: no graphics driver or framebuffer assumptions. */
+#define VGA_TEXT ((volatile uint16_t *)(uintptr_t)0xB8000u)
+#define VGA_WIDTH 80u
+#define VGA_HEIGHT 25u
+static void vga_put_at(uint32_t x, uint32_t y, char ch, uint8_t attr) {
+    if (x < VGA_WIDTH && y < VGA_HEIGHT)
+        VGA_TEXT[y * VGA_WIDTH + x] = (uint16_t)(uint8_t)ch | ((uint16_t)attr << 8);
+}
+static void vga_write_at(uint32_t x, uint32_t y, const char *s, uint8_t attr) {
+    while (*s && x < VGA_WIDTH) vga_put_at(x++, y, *s++, attr);
+}
+static void vga_clear(uint8_t attr) {
+    uint32_t i;
+    for (i = 0; i < VGA_WIDTH * VGA_HEIGHT; ++i)
+        VGA_TEXT[i] = (uint16_t)' ' | ((uint16_t)attr << 8);
+}
+static void boot_splash(void) {
+    static const char *frames[] = { "|", "/", "-", "+", "|", "/", "-", "+" };
+    static const char *logo[] = {
+        "  XXXX    XXXX   XXXX  ",
+        " XX  XX  XX  XX XX  XX ",
+        " XX      XX  XX XX     ",
+        " XX XXX  XX  XX  XXXX  ",
+        " XX  XX  XX  XX     XX ",
+        "  XXXX    XXXX  XXXX   "
+    };
+    uint32_t frame, row, delay;
+    vga_clear(0x07u);
+    for (row = 0; row < 6u; ++row)
+        vga_write_at(28u, 5u + row, logo[row], 0x0Au);
+    vga_write_at(25u, 13u, "ORIGINAL XBOX  /  PC KERNEL PORT", 0x0Fu);
+    vga_write_at(31u, 16u, "INITIALIZING", 0x07u);
+    for (frame = 0; frame < 8u; ++frame) {
+        vga_put_at(46u, 16u, frames[frame][0], 0x0Au);
+        for (delay = 0; delay < 3500000u; ++delay)
+            __asm__ volatile ("pause");
+    }
+    vga_write_at(27u, 20u, "PC HARDWARE BRING-UP", 0x0Bu);
+}
 static void serial_init(void) {
     outb(COM1 + 1, 0x00);
     outb(COM1 + 3, 0x80);
@@ -239,6 +278,8 @@ static void report_pci(void) {
 void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
     const multiboot_info_min *info = (const multiboot_info_min *)(uintptr_t)multiboot_info_address;
     serial_init();
+    boot_splash();
+    serial_write("PC-HAL: VGA text-mode boot animation rendered\n");
     PcGdtInstallFlatSegments();
     serial_write("PC-HAL: flat GDT installed\n");
     PcIdtInstallExceptions();
