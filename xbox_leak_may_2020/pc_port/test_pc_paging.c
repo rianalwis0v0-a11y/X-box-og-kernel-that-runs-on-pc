@@ -31,6 +31,15 @@ int main(void) {
                           0x2000u, PC_PAGING_WRITE));
     assert(!pc_paging_translate(&paging, 0x1000u, &physical, &flags));
 
+    /* A corrupted public context must fail closed, not index past storage. */
+    paging.table_count = paging.table_capacity + 1u;
+    assert(!pc_paging_map(&paging, 0x40000000u, 0x00400000u,
+                          0x1000u, PC_PAGING_WRITE));
+    assert(!pc_paging_translate(&paging, 0xc0000000u, &physical, &flags));
+
+    assert(!pc_paging_init(&paging, directory, 0x00100000u,
+                           tables, 0x00100800u, 4u));
+
     assert(pc_paging_init(&paging, directory, 0x00100000u,
                           tables, 0x00101000u, 1u));
     assert(!pc_paging_map(&paging, 0x00000000u, 0x00000000u,
