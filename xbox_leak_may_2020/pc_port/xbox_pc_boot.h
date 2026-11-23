@@ -24,6 +24,17 @@ int xbox_pc_validate_pe32_file(const uint8_t *file, uint32_t file_size,
                                xbox_pc_kernel_image *out);
 
 /*
+ * Map a previously validated PE32 image into caller-provided memory.
+ * load_base is the virtual address represented by destination[0].
+ * The caller owns allocation, mapping, permissions, and page tables.
+ * Returns 1 on success; unsupported/malformed relocations return 0.
+ * This function never transfers control to the image.
+ */
+int xbox_pc_load_pe32_image(const xbox_pc_kernel_image *image,
+                            uint8_t *destination, uint32_t destination_size,
+                            uint32_t load_base, uint32_t *entry_address);
+
+/*
  * Locate and validate an xboxkrnl.exe Multiboot module.
  * This deliberately does not execute it or invent XboxCryptKeys.
  */
