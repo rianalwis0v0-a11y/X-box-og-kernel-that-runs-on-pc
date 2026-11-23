@@ -41,6 +41,14 @@ int main(void) {
     assert(memory.free_pages == 0u);
     assert(pc_physmem_alloc_page(&memory) == 0u);
     assert(!pc_physmem_reserve(&memory,UINT64_MAX-4u,16u));
+
+    /* Even if firmware calls page zero usable, never return address zero. */
+    memset(mmap_bytes,0,sizeof(mmap_bytes));
+    entry(0,0,0x3000u,1u);
+    assert(pc_physmem_init(&memory,bitmap,sizeof(bitmap),mmap_bytes,24u));
+    assert(memory.free_pages == 2u);
+    assert(pc_physmem_alloc_page(&memory) == 0x1000u);
+
     puts("PC-PHYSMEM: reserved-range page allocator tests PASS");
     return 0;
 }
