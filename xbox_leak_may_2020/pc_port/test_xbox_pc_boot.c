@@ -21,7 +21,7 @@ static void make_image(void) {
     memset(image,0,sizeof(image));
     put16(0,0x5a4d); put32(0x3c,pe); put32(pe,0x00004550);
     put16(coff,0x014c); put16(coff+2,1); put16(coff+16,224);
-    put16(opt,0x010b); put32(opt+16,0x1000); put32(opt+28,0x80010000);
+    put16(opt,0x010b); put32(opt+92,16); put32(opt+16,0x1000); put32(opt+28,0x80010000);
     put32(opt+32,0x1000); put32(opt+36,0x200);
     put32(opt+56,0x2000); put32(opt+60,0x200);
     memcpy(image+sec,".text",5);
@@ -52,6 +52,15 @@ int main(void) {
     make_image();
     assert(xbox_pc_validate_pe32_file(image,sizeof(image),&out));
     assert(out.entry_rva==0x1000 && out.section_count==1);
+
+    make_image(); put32(0x80+24+96+8,0x1500); put32(0x80+24+96+12,0x40);
+    assert(!xbox_pc_validate_pe32_file(image,sizeof(image),&out));
+
+    make_image(); put32(0x80+24+96+9*8,0x1600); put32(0x80+24+96+9*8+4,0x20);
+    assert(!xbox_pc_validate_pe32_file(image,sizeof(image),&out));
+
+    make_image(); put32(0x80+24+96+13*8,0x1700); put32(0x80+24+96+13*8+4,0x20);
+    assert(!xbox_pc_validate_pe32_file(image,sizeof(image),&out));
 
     make_image(); put32(0x80+24+16,0x1800);
     assert(!xbox_pc_validate_pe32_file(image,sizeof(image),&out));
