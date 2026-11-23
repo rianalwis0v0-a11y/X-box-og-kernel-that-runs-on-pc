@@ -70,7 +70,7 @@ static uint32_t PcHalInvoke(uint32_t operation, uint32_t payload_bytes)
     call->shared_offset = g_call_offset;
     call->sequence = ++g_sequence;
     call->status = PC_PLATFORM_E_BUSY;
-    call->reserved = 0;
+    call->result_count = 0;
 
 #ifdef PC_COMPAT_GUEST
     status = PcHalHypercall(g_call_offset, total, g_sequence);
@@ -99,13 +99,15 @@ int PcHalInitializePlatform(void)
     ranges = (pc_platform_memory_range *)(g_shared + (size_t)g_call_offset + sizeof(pc_platform_call));
     memset(ranges, 0, sizeof(*ranges) * PC_HAL_MAX_MEMORY_RANGES);
     if (PcHalInvoke(PC_PLATFORM_OP_MEMORY_MAP,
-                    sizeof(*ranges) * PC_HAL_MAX_MEMORY_RANGES) != PC_PLATFORM_OK)
+                    sizeof(*ranges) * PC_HAL_MAX_MEMORY_RANGES) != PC_PLATFORM_OK ||
+        ((volatile pc_platform_call *)(g_shared + (size_t)g_call_offset))->result_count > PC_HAL_MAX_MEMORY_RANGES)
         return 0;
 
     devices = (pc_platform_pci_device *)(g_shared + (size_t)g_call_offset + sizeof(pc_platform_call));
     memset(devices, 0, sizeof(*devices) * PC_HAL_MAX_PCI_DEVICES);
     if (PcHalInvoke(PC_PLATFORM_OP_PCI_ENUMERATE,
-                    sizeof(*devices) * PC_HAL_MAX_PCI_DEVICES) != PC_PLATFORM_OK)
+                    sizeof(*devices) * PC_HAL_MAX_PCI_DEVICES) != PC_PLATFORM_OK ||
+        ((volatile pc_platform_call *)(g_shared + (size_t)g_call_offset))->result_count > PC_HAL_MAX_PCI_DEVICES)
         return 0;
 
     timer = (pc_platform_timer_info *)(g_shared + (size_t)g_call_offset + sizeof(pc_platform_call));
