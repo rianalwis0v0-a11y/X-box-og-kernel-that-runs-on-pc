@@ -26,7 +26,8 @@ The shared ABI uses guest-physical/shared-buffer handles, offsets, lengths, and 
 Initial GPU milestones:
 - [ ] Enumerate and expose a virtual NV2A PCI function to the guest.
 - [ ] Map the guest NV2A register aperture to a monitor-owned device model.
-- [ ] Implement bounded pushbuffer/shared-ring submission and validation.
+- [x] Implement a bounded shared-ring consumer and operation dispatcher in `nv2a_dispatch.c`; malformed commands are retired with an explicit status.
+- [ ] Implement the NV2A pushbuffer/method decoder and register/state model connection.
 - [ ] Connect the host consumer to the existing NV2A translation provider.
 - [ ] Translate the first safe command path (clear + triangle) and verify a fence.
 - [ ] Add texture, vertex/index buffers, shaders, render targets, and synchronization incrementally.
@@ -56,9 +57,7 @@ The existing pc_port/ Multiboot harness and PE32 inspection tool are validation 
 
 ## Standard PC device contract
 
-The guest-facing PC contract is defined in `pc_platform_abi.h`. It deliberately uses
-fixed-width records and offsets into registered shared memory; guest pointers are
-never passed to the host. The initial operation set covers:
+The guest-facing PC contract is defined in `pc_platform_abi.h`. It deliberately uses fixed-width records and offsets into registered shared memory; guest pointers are never passed to the host. The initial operation set covers:
 
 - firmware-provided RAM map and reserved/MMIO ranges;
 - PCI enumeration and configuration-space reads/writes;
@@ -67,24 +66,13 @@ never passed to the host. The initial operation set covers:
 - block I/O through shared buffers;
 - NV2A submission through the separate GPU bridge.
 
-The compatibility monitor maps these operations to the host PC. On a Windows host,
-the monitor/backend can use the OS PCI, memory, interrupt, storage and graphics
-interfaces; on other hosts, equivalent host backends can be supplied. The Xbox
-guest sees stable virtual PCI/device contracts, not arbitrary host kernel pointers
-or direct access to host hardware.
+The compatibility monitor maps these operations to the host PC. On a Windows host, the monitor/backend can use the OS PCI, memory, interrupt, storage and graphics interfaces; on other hosts, equivalent host backends can be supplied. The Xbox guest sees stable virtual PCI/device contracts, not arbitrary host kernel pointers or direct access to host hardware.
 
 ## NV2A connection sequence
 
-1. The monitor exposes a virtual PCI function with NVIDIA vendor ID `0x10DE` and
-   NV2A device ID `0x02A0`, and traps its BAR accesses.
-2. The guest-side Xbox GPU adapter converts register/pushbuffer activity into
-   validated `pc_nv2a_command` records in the shared ring from `nv2a_bridge.h`.
-3. The host GPU provider consumes those records, translates NV2A state/methods and
-   submits equivalent work through the host graphics backend.
+1. The monitor exposes a virtual PCI function with NVIDIA vendor ID `0x10DE` and NV2A device ID `0x02A0`, and traps its BAR accesses.
+2. The guest-side Xbox GPU adapter converts register/pushbuffer activity into validated `pc_nv2a_command` records in the shared ring from `nv2a_bridge.h`.
+3. The host GPU provider consumes those records, translates NV2A state/methods and submits equivalent work through the host graphics backend.
 4. Host completion updates the fence and raises the guest's virtual GPU interrupt.
 
-The platform ABI and NV2A bridge are now compile-checked by CI. They are interfaces,
-not a finished VMM, PCI device model, guest GPU adapter, or linked translation
-provider. The next executable milestone is a monitor-side shared-memory dispatcher
-with strict bounds checks, followed by a virtual PCI function and a clear/triangle
-fence test against the real NV2A provider.
+The platform ABI and NV2A bridge are compile-checked by CI. The new dispatcher now validates and consumes one shared-ring command at a time, bounds-checks pushbuffer references, and forwards supported operations through explicit host callbacks. It is a tested integration boundary, not a finished VMM, PCI device model, NV2A method decoder, linked translation provider, or rendered GPU output. The next executable milestone is the real pushbuffer decoder and connection to the existing NV2A state/shader translator, followed by a clear/triangle fence test.
