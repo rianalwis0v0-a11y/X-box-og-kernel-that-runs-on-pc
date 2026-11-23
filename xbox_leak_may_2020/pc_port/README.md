@@ -2,6 +2,10 @@
 
 This is a real ring-0 x86 test kernel, booted directly by a Multiboot v1 bootloader. It does not run as a Windows/Linux process and does not require VT-x, AMD-V, or VMCALL. GRUB is only the bootloader; after handoff, the harness executes privileged CPU and PCI I/O instructions directly.
 
+## VGA boot animation
+
+The harness now draws a small green-on-black Xbox/PC-port splash in the legacy VGA text buffer at physical address 0xB8000, animates an initialization spinner, and then continues with serial hardware diagnostics. This is a text-mode splash, not the original Xbox dashboard animation or an NV2A accelerated graphics path. QEMU CI checks that the boot code reaches the animation routine; the serial assertion does not visually inspect the screen.
+
 ## Current executable milestone
 
 - 32-bit protected-mode entry with a private stack.
