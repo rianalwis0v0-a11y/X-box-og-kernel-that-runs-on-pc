@@ -16,6 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            xbox_leak_may_2020/pc_port
+          sparse-checkout-cone-mode: true
       - name: Install toolchain and emulator
         run: |
           sudo apt-get update
