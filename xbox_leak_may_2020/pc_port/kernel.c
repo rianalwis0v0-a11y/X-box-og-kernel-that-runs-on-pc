@@ -5,13 +5,12 @@
 #include "pc_irq.h"
 #include "pc_physmem.h"
 #include "pc_paging.h"
+#include "pc_hal_native.h"
 
 #define COM1 0x3F8u
 #define MULTIBOOT_BOOTLOADER_MAGIC 0x2BADB002u
 #define MULTIBOOT_INFO_MEMORY  (1u << 0)
 #define MULTIBOOT_INFO_MMAP    (1u << 6)
-#define PCI_CONFIG_ADDRESS 0xCF8u
-#define PCI_CONFIG_DATA    0xCFCu
 #define MULTIBOOT_INFO_CMDLINE (1u << 2)
 #define MULTIBOOT_INFO_MODS (1u << 3)
 #define MULTIBOOT_INFO_V1_BYTES 88u
@@ -127,13 +126,6 @@ static void serial_hex(uint32_t value) {
     int shift;
     for (shift = 28; shift >= 0; shift -= 4)
         serial_putc(digits[(value >> shift) & 0xFu]);
-}
-static uint32_t pci_read32(uint8_t bus, uint8_t device, uint8_t function, uint8_t offset) {
-    uint32_t address = 0x80000000u | ((uint32_t)bus << 16) |
-        ((uint32_t)device << 11) | ((uint32_t)function << 8) |
-        ((uint32_t)offset & 0xFCu);
-    outl(PCI_CONFIG_ADDRESS, address);
-    return inl(PCI_CONFIG_DATA);
 }
 static void report_cpu(void) {
     uint32_t eax = 0, ebx, ecx = 0, edx;
@@ -253,18 +245,35 @@ static void report_pci(void) {
     uint32_t bus, device, function;
     for (bus = 0; bus < 256; ++bus) {
         for (device = 0; device < 32; ++device) {
-            uint32_t id0 = pci_read32((uint8_t)bus, (uint8_t)device, 0, 0);
+            uint32_t id0 = PcHalNativePciRead32((uint8_t)bus, (uint8_t)device, 0, 0);
             uint32_t vendor0 = id0 & 0xFFFFu;
-            uint32_t header = pci_read32((uint8_t)bus, (uint8_t)device, 0, 0x0C);
+            uint32_t header = PcHalNativePciRead32((uint8_t)bus, (uint8_t)device, 0, 0x0C);
             uint32_t functions = ((header >> 16) & 0x80u) ? 8u : 1u;
             if (vendor0 == 0xFFFFu) continue;
             for (function = 0; function < functions; ++function) {
                 uint32_t id = function == 0 ? id0 :
-                    pci_read32((uint8_t)bus, (uint8_t)device, (uint8_t)function, 0);
+                    PcHalNativePciRead32((uint8_t)bus, (uint8_t)device, (uint8_t)function, 0);
                 uint32_t vendor = id & 0xFFFFu;
                 uint32_t product = id >> 16;
                 if (vendor == 0xFFFFu) continue;
-                ++found;
+                {
+                    uint32_t class_info = PcHalNativePciRead32(
+                        (uint8_t)bus, (uint8_t)device, (uint8_t)function, 0x08u);
+                    uint32_t bar0 = PcHalNativePciRead32(
+                        (uint8_t)bus, (uint8_t)device, (uint8_t)function, 0x10u);
+                    uint8_t irq_line = PcHalNativePciRead8(
+                        (uint8_t)bus, (uint8_t)device, (uint8_t)function, 0x3cu);
+                    ++found;
+                    serial_write("PC-HAL: PCI device ");
+                    serial_hex(bus); serial_putc(':');
+                    serial_hex(device); serial_putc('.');
+                    serial_hex(function);
+                    serial_write(" id="); serial_hex(id);
+                    serial_write(" class="); serial_hex(class_info >> 8);
+                    serial_write(" BAR0="); serial_hex(bar0);
+                    serial_write(" IRQ="); serial_hex(irq_line);
+                    serial_write("\\n");
+                }
                 if (vendor == 0x10DEu && product == 0x02A0u) ++nv2a;
             }
         }
