@@ -45,6 +45,8 @@ jobs:
         run: g++ -m32 -std=c++17 -ffreestanding -fno-exceptions -fno-rtti -fno-builtin -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port -fsyntax-only xbox_leak_may_2020/pc_port/xbe_format.cpp
       - name: Compile native PC Xbox kernel module validator
         run: gcc -m32 -std=c11 -ffreestanding -fno-builtin -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port -fsyntax-only xbox_leak_may_2020/pc_port/xbox_pc_boot.c
+      - name: Compile native bare-metal PC HAL primitives
+        run: gcc -m32 -std=c11 -ffreestanding -fno-builtin -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port -fsyntax-only xbox_leak_may_2020/pc_port/pc_hal_native.c
       - name: Compile PC guest HAL VMCALL adapter
         run: gcc -m32 -std=c11 -Wall -Wextra -Werror -DPC_COMPAT_GUEST -Ixbox_leak_may_2020/pc_port -fsyntax-only xbox_leak_may_2020/pc_port/pc_hal_guest.c
       - name: Build standalone 32-bit harness
