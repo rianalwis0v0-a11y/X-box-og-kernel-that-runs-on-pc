@@ -43,6 +43,8 @@ jobs:
           sudo apt-get install -y gcc-multilib g++-multilib grub-common grub-pc-bin qemu-system-x86
       - name: Compile freestanding XboxRuntime XBE parser for 32-bit target
         run: g++ -m32 -std=c++17 -ffreestanding -fno-exceptions -fno-rtti -fno-builtin -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port -fsyntax-only xbox_leak_may_2020/pc_port/xbe_format.cpp
+      - name: Test native PC Xbox kernel PE32 validator
+        run: gcc -std=c11 -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port xbox_leak_may_2020/pc_port/xbox_pc_boot.c xbox_leak_may_2020/pc_port/test_xbox_pc_boot.c -o /tmp/xbox-pc-boot-tests && /tmp/xbox-pc-boot-tests
       - name: Compile native PC Xbox kernel module validator
         run: gcc -m32 -std=c11 -ffreestanding -fno-builtin -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port -fsyntax-only xbox_leak_may_2020/pc_port/xbox_pc_boot.c
       - name: Compile flat GDT implementation
