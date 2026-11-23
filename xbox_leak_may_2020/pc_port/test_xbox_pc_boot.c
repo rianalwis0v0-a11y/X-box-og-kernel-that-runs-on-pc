@@ -74,6 +74,18 @@ int main(void) {
     make_image(); put32(0x80+24+224+20,0x100);
     assert(!xbox_pc_validate_pe32_file(image,sizeof(image),&out));
 
+    make_image(); put32(0x80+24+32,3);
+    assert(!xbox_pc_validate_pe32_file(image,sizeof(image),&out));
+    make_image(); put32(0x80+24+36,0x100);
+    assert(!xbox_pc_validate_pe32_file(image,sizeof(image),&out));
+    make_image(); put32(0x80+24+224+12,0x1100);
+    assert(!xbox_pc_validate_pe32_file(image,sizeof(image),&out));
+
+    make_reloc_image(); put32(0x80+24+224+40+12,0x1000);
+    assert(!xbox_pc_validate_pe32_file(image,sizeof(image),&out));
+    make_reloc_image(); put32(0x80+24+224+40+20,0x200);
+    assert(!xbox_pc_validate_pe32_file(image,sizeof(image),&out));
+
 
     {
         uint32_t entry=0;
