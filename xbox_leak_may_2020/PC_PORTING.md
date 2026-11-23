@@ -217,3 +217,13 @@ Limitations: this is a page-table data-structure builder only. It does not alloc
 The original source file `xbox trunk/xbox/private/ntos/init/xboxkrnl.c` verifies the entry signature as `__cdecl main(PUCHAR LoadOptions, const UCHAR *CryptKeys)`. It copies two consecutive key blocks, each of size `XBOX_KEY_LENGTH`, into the EEPROM and certificate key globals, then calls `KiSystemStartup()`. The port exposes the function-pointer type but does not invent the key material or assume a length.
 
 The PE32 validator now rejects import, TLS, and delay-import directories because those mechanisms are not implemented. The PE mapper handles bounded section copying and HIGHLOW relocations. The page-table builder is implemented and host-tested, but does not allocate physical pages or turn paging on. The next required work is to reserve memory using the Multiboot map, identify the exact Xbox address aliases and loader data layout from `bldr32`/memory-manager source, and build the actual boot handoff.
+
+
+### Page-table builder CI result
+
+- [x] Native 4 KiB page-table mapping tests passed.
+- [x] Freestanding 32-bit page-table source compiled.
+- [x] Full standalone harness linked the page-table module, passed Multiboot validation, and booted in QEMU.
+- [ ] The page-table builder is not yet activated by the harness; no Xbox memory aliases or physical allocator are in place.
+
+Verified in [GitHub Actions run 45185239535](https://github.com/rianalwis0v0-a11y/X-box-og-kernel-that-runs-on-pc/actions/runs/45185239535).
