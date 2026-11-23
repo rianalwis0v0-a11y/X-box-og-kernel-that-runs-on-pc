@@ -295,3 +295,13 @@ Paging is still deliberately disabled. This test proves the page-table structure
 - [ ] Add PCI BAR and firmware/MMIO discovery, page permissions/cache attributes, then enable paging only after every executing region is mapped.
 
 The QEMU test confirms the allocator and page-table data structures can be built. It does not load the Xbox kernel, activate CR0.PG/CR3, or prove the entire original Xbox address space is supported.
+
+
+### Physical allocation and page-table validation follow-up (2026-11-23)
+
+- [x] Add contiguous aligned page-run allocation, used for the 129-page directory/table block.
+- [x] Reject corrupt allocator state before allocation or reservation.
+- [x] Test page-zero exclusion, aligned contiguous allocation, invalid alignment, insufficient free pages, and corrupted allocator state.
+- [x] Reject overlapping kernel-virtual backing ranges for page-directory and page-table storage.
+- [x] QEMU verifies both identity and 0x80000000 alias translations for a representative address; paging remains OFF.
+- [ ] Confirm the newest CI run after these test-only hardening changes.
