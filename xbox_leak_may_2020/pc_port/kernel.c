@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "xbox_pc_boot.h"
 #include "pc_idt.h"
+#include "pc_gdt.h"
 
 #define COM1 0x3F8u
 #define MULTIBOOT_BOOTLOADER_MAGIC 0x2BADB002u
@@ -151,6 +152,7 @@ static void report_pci(void) {
 void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
     const multiboot_info_min *info = (const multiboot_info_min *)(uintptr_t)multiboot_info_address;
     serial_init();
+    PcGdtInstallFlatSegments();
     PcIdtInstallExceptions();
     serial_write("PC-HAL: exception IDT installed (vectors 0-31)\n");
     serial_write("PC-HARNESS: entered 32-bit bare-metal kernel\n");
