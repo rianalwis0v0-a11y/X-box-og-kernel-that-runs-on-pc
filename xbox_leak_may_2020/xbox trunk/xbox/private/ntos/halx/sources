@@ -29,7 +29,7 @@ TARGETNAME=halx
 TARGETPATH=$(BASEDIR)\private\ntos\obj
 TARGETTYPE=LIBRARY
 
-INCLUDES=..;$(BASEDIR)\private\ntos\inc;..\ke;..\mmx;$(BASEDIR)\private\inc
+INCLUDES=..;$(BASEDIR)\private\ntos\inc;..\ke;..\mmx;$(BASEDIR)\private\inc;..\..\..\..\..\pc_port
 
 MSC_WARNING_LEVEL=/W3 /WX
 
@@ -56,4 +56,5 @@ i386_SOURCES=i386\ixclock.asm  \
              i386\smbussci.c   \
              i386\superio.asm  \
              i386\xxhal.c      \
-             i386\xxioacc.asm
+             i386\xxioacc.asm \
+             ..\..\..\..\..\pc_port\pc_hal_guest.c
