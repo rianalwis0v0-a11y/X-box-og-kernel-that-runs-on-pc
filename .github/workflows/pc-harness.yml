@@ -22,6 +22,8 @@ jobs:
           sparse-checkout-cone-mode: true
       - name: Test PE32 image inspector
         run: python3 -m unittest discover -s xbox_leak_may_2020/pc_port -p 'test_*.py' -v
+      - name: Validate NV2A bridge ABI layout
+        run: gcc -std=c11 -Wall -Wextra -Werror -fsyntax-only xbox_leak_may_2020/pc_port/test_nv2a_abi.c
       - name: Install toolchain and emulator
         run: |
           sudo apt-get update
