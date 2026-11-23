@@ -107,8 +107,12 @@ int PcAcpiParseMadt(const void *data, size_t available, pc_acpi_madt_info *out)
             iso->gsi = read_u32(r + 4);
             iso->flags = (uint16_t)((uint16_t)r[8] | ((uint16_t)r[9] << 8));
         } else if (type == 5u) {
+            uint64_t address;
             if (record_length < 12u) return 0;
-            parsed.local_apic_address = (uint32_t)read_u64(r + 4);
+            address = read_u64(r + 4);
+            /* This port is 32-bit; never silently truncate a firmware address. */
+            if (address > UINT32_MAX) return 0;
+            parsed.local_apic_address = (uint32_t)address;
         }
         offset += record_length;
     }
