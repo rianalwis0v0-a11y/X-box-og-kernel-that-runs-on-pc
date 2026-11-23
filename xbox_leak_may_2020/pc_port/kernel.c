@@ -11,7 +11,9 @@
 #define MULTIBOOT_INFO_MMAP    (1u << 6)
 #define PCI_CONFIG_ADDRESS 0xCF8u
 #define PCI_CONFIG_DATA    0xCFCu
+#define MULTIBOOT_INFO_CMDLINE (1u << 2)
 #define MULTIBOOT_INFO_MODS (1u << 3)
+#define MULTIBOOT_INFO_V1_BYTES 88u
 
 typedef struct multiboot_info_min {
     uint32_t flags;
@@ -165,9 +167,13 @@ static int initialize_physical_allocator(const multiboot_info_min *info,
         !pc_physmem_reserve(&physical_memory, kernel_start,
                             kernel_end - kernel_start) ||
         !pc_physmem_reserve(&physical_memory, info_address,
-                            sizeof(*info)) ||
+                            MULTIBOOT_INFO_V1_BYTES) ||
         !pc_physmem_reserve(&physical_memory, info->mmap_addr,
                             info->mmap_length))
+        return 0;
+
+    if ((info->flags & MULTIBOOT_INFO_CMDLINE) && info->cmdline &&
+        !pc_physmem_reserve(&physical_memory, info->cmdline, 4096u))
         return 0;
 
     if (info->flags & MULTIBOOT_INFO_MODS) {
@@ -186,6 +192,9 @@ static int initialize_physical_allocator(const multiboot_info_min *info,
             if (modules[i].end <= modules[i].start ||
                 !pc_physmem_reserve(&physical_memory, modules[i].start,
                                     modules[i].end - modules[i].start))
+                return 0;
+            if (modules[i].string &&
+                !pc_physmem_reserve(&physical_memory, modules[i].string, 64u))
                 return 0;
         }
     }
