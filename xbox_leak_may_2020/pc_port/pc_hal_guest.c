@@ -51,10 +51,11 @@ static uint32_t PcHalInvoke(uint32_t operation, uint32_t payload_bytes)
     uint32_t total = (uint32_t)sizeof(pc_platform_call) + payload_bytes;
     uint32_t status;
 
-    if (!g_shared || total > PC_PLATFORM_MAX_RECORD_BYTES)
+    if (!g_shared || g_call_offset > 0xFFFFFFFFULL ||
+        total > PC_PLATFORM_MAX_RECORD_BYTES)
         return PC_PLATFORM_E_INVALID;
 
-    call = (volatile pc_platform_call *)g_shared;
+    call = (volatile pc_platform_call *)(g_shared + (size_t)g_call_offset);
     call->magic = PC_PLATFORM_CALL_MAGIC;
     call->abi_major = PC_PLATFORM_ABI_MAJOR;
     call->abi_minor = PC_PLATFORM_ABI_MINOR;
@@ -89,19 +90,19 @@ int PcHalInitializePlatform(void)
     if (PcHalInvoke(PC_PLATFORM_OP_QUERY, 0) != PC_PLATFORM_OK)
         return 0;
 
-    ranges = (pc_platform_memory_range *)(g_shared + sizeof(pc_platform_call));
+    ranges = (pc_platform_memory_range *)(g_shared + (size_t)g_call_offset + sizeof(pc_platform_call));
     memset(ranges, 0, sizeof(*ranges) * PC_HAL_MAX_MEMORY_RANGES);
     if (PcHalInvoke(PC_PLATFORM_OP_MEMORY_MAP,
                     sizeof(*ranges) * PC_HAL_MAX_MEMORY_RANGES) != PC_PLATFORM_OK)
         return 0;
 
-    devices = (pc_platform_pci_device *)(g_shared + sizeof(pc_platform_call));
+    devices = (pc_platform_pci_device *)(g_shared + (size_t)g_call_offset + sizeof(pc_platform_call));
     memset(devices, 0, sizeof(*devices) * PC_HAL_MAX_PCI_DEVICES);
     if (PcHalInvoke(PC_PLATFORM_OP_PCI_ENUMERATE,
                     sizeof(*devices) * PC_HAL_MAX_PCI_DEVICES) != PC_PLATFORM_OK)
         return 0;
 
-    timer = (pc_platform_timer_info *)(g_shared + sizeof(pc_platform_call));
+    timer = (pc_platform_timer_info *)(g_shared + (size_t)g_call_offset + sizeof(pc_platform_call));
     memset(timer, 0, sizeof(*timer));
     if (PcHalInvoke(PC_PLATFORM_OP_TIMER_QUERY, sizeof(*timer)) != PC_PLATFORM_OK ||
         timer->frequency_hz == 0)
@@ -118,7 +119,7 @@ int PcHalRegisterInterrupt(uint32_t vector, uint32_t flags)
 #ifdef PC_COMPAT_GUEST
     pc_platform_interrupt_request *request;
     if (!g_shared) return 0;
-    request = (pc_platform_interrupt_request *)(g_shared + sizeof(pc_platform_call));
+    request = (pc_platform_interrupt_request *)(g_shared + (size_t)g_call_offset + sizeof(pc_platform_call));
     request->guest_irq = vector;
     request->vector = vector;
     request->flags = flags;
