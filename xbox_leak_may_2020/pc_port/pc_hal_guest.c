@@ -18,13 +18,13 @@ void PcHalBindSharedWindow(volatile void *mapping, uint64_t call_record_offset)
 }
 
 #ifdef PC_COMPAT_GUEST
-static uint32_t PcHalHypercall(uint64_t offset, uint32_t bytes, uint64_t sequence)
+static uint32_t PcHalHypercall(uint64_t sharedOffset, uint32_t bytes, uint64_t sequence)
 {
     uint32_t result;
 #if defined(_MSC_VER) && defined(_M_IX86)
     __asm {
         mov eax, PC_PLATFORM_CALL_MAGIC
-        mov ebx, dword ptr offset
+        mov ebx, dword ptr sharedOffset
         mov ecx, bytes
         mov edx, dword ptr sequence
         _emit 0x0F
@@ -35,7 +35,7 @@ static uint32_t PcHalHypercall(uint64_t offset, uint32_t bytes, uint64_t sequenc
 #elif defined(__i386__)
     __asm__ volatile ("vmcall"
         : "=a"(result)
-        : "a"(PC_PLATFORM_CALL_MAGIC), "b"((uint32_t)offset),
+        : "a"(PC_PLATFORM_CALL_MAGIC), "b"((uint32_t)sharedOffset),
           "c"(bytes), "d"((uint32_t)sequence)
         : "memory");
 #else
