@@ -145,8 +145,11 @@ static void report_acpi(void)
 {
     pc_acpi_rsdp_info rsdp;
     size_t offset = 0;
-    uint16_t ebda_segment = *(volatile const uint16_t *)(uintptr_t)0x40Eu;
-    uint32_t ebda = (uint32_t)ebda_segment << 4;
+    uint16_t ebda_segment;
+    uint32_t ebda;
+    /* Read the BIOS Data Area without triggering GCC's null-page warning. */
+    __asm__ volatile ("movw 0x40e, %0" : "=r"(ebda_segment));
+    ebda = (uint32_t)ebda_segment << 4;
     int found = 0;
 
     /* The EBDA's first KiB is searched before the legacy BIOS area. */
