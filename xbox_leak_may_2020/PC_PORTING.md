@@ -22,10 +22,11 @@ Implement a small, independent x86 boot harness. It must not overwrite or patch 
 
 - [x] Select a first test path: Multiboot v1 via GRUB/QEMU, 32-bit protected mode. This validates the PC harness only; it is not the original Xbox firmware path.
 - [x] Confirm the Xbox HAL source is x86-specific; the isolated harness enters 32-bit protected mode.
-- [x] Install an IDT with fail-stop handlers for CPU exception vectors 0-31 in the independent PC harness.\n- [x] Install a flat 32-bit GDT and reload CS/data segments in the independent PC harness.\n- [x] Report fatal exception vector, error code, and EIP over serial.\n- [ ] Add controlled IRQ stubs, PIC/APIC routing, and timer self-test.
-- [ ] Capture CPU vendor/features and physical memory map.
-- [ ] Provide serial-console diagnostics and a deterministic halt on fatal errors.
-- [ ] Validate the harness with a minimal standalone test image before loading kernel code.
+- [x] Install an IDT with fail-stop handlers for CPU exception vectors 0-31 in the independent PC harness.\n- [x] Install a flat 32-bit GDT and reload CS/data segments in the independent PC harness.\n- [x] Report fatal exception vector, error code, and EIP over serial.\n- [x] Add 8259 IRQ stubs, mask all IRQs except IRQ0, and run a PIT tick self-test.
+- [ ] Add IOAPIC/APIC support and robust spurious IRQ handling.
+- [x] Capture CPU vendor and parse the Multiboot physical memory map.
+- [x] Provide serial-console diagnostics and a deterministic fatal halt.
+- [x] Add a QEMU boot test that checks the harness serial output; latest CI result still needs confirmation.
 
 ## Stage 2 — kernel image contract
 
@@ -77,7 +78,7 @@ Source analysis has confirmed these concrete facts:
 - The boot tree contains bootx/preldr32 and bootx/bldr32. preldr32.c verifies ROM contents/signature, decrypts the bootloader, and derives its entry address from ROM-specific data. That flow cannot be used unchanged on a PC with no Xbox ROM/MCPX.
 - CPXXUPD/private/ntos/init/sources.inc is only an update component manifest and links against prebuilt Xbox libraries; it is not a complete independent kernel build.
 
-The independent PC harness, Makefile, linker script, serial diagnostics, GDT, exception IDT, and QEMU CI workflow are committed under pc_port/. The current commit must pass GitHub Actions before the GDT/IDT milestone is considered tested.
+The independent PC harness, Makefile, linker script, serial diagnostics, GDT, exception IDT, and QEMU CI workflow are committed under pc_port/. The latest commits add a flat GDT, fatal exception diagnostics, 8259 IRQ stubs, and a PIT IRQ0 self-test. The GitHub Actions run must pass before these changes are considered tested; no passing run has been confirmed in this session.
 
 Next engineering task: inspect bootx/bldr32 startup/loader contract and the halx/i386 initialization dependencies, then define the smallest PC loader-to-kernel handoff. Do not call the original Xbox preloader on a PC: its ROM signature/decryption and fixed-address assumptions are platform-specific.
 
@@ -145,4 +146,4 @@ This is a real source-level HAL split, but it is not yet a complete working PC H
 - [x] Detect NVIDIA NV2A PCI ID 10DE:02A0 when present; report absence honestly on ordinary PCs.
 - [x] Update QEMU CI to require these serial diagnostics.
 
-This is the first native hardware-access milestone: the harness executes directly in 32-bit protected mode and performs CPU/PCI I/O without a hypervisor. It still halts before loading the Xbox kernel. It does not yet install a complete IDT/exception path, enable a timer/interrupt controller, build Xbox-required page tables, or implement the Xbox kernel's PE loader/entry ABI. The VMCALL-based `PC_COMPAT_GUEST` path is not used by this bare-metal harness and must not be confused with it.
+This is the first native hardware-access milestone: the harness executes directly in 32-bit protected mode and performs CPU/PCI I/O without a hypervisor. It still halts before loading the Xbox kernel. The PC harness now installs a flat GDT and exception/legacy IRQ IDT gates and tests PIT IRQ0 through the 8259 PIC. It does not yet build Xbox-required page tables or implement the Xbox kernel's PE loader/entry ABI. The VMCALL-based `PC_COMPAT_GUEST` path is not used by this bare-metal harness and must not be confused with it.
