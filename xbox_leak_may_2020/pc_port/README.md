@@ -47,3 +47,10 @@ Do not flash this test ELF to a physical disk or firmware. Test it in QEMU first
 The portable `xbe_format.h/.cpp` parser and image-layout routine were copied from [rianalwis0v0-a11y/XboxRuntime](https://github.com/rianalwis0v0-a11y/XboxRuntime/tree/main/modules/xbe_loader). The source MIT license is preserved in `XBOXRUNTIME_LICENSE.txt`. This code validates XBE metadata and maps headers/sections into a caller-provided buffer; it does not perform disk I/O, relocation, kernel-thunk import resolution, TLS execution, or kernel entry.
 
 CI compiles this parser as a 32-bit freestanding C++ translation unit. It is not linked into the boot harness yet: the next step is a physical-storage reader and a bounded allocator/memory-map reservation, then a verified XBE-to-kernel boot handoff. Windows-only runtime files and the Windows guest execution backend were intentionally not copied into the bare-metal kernel.
+
+
+## Kernel entry and unsupported PE startup features
+
+The source-defined Xbox kernel entry is `__cdecl main(PUCHAR LoadOptions, const UCHAR *CryptKeys)`; see `xbox_pc_kernel_entry` in `xbox_pc_boot.h`. The port must provide valid load-options and crypt-key buffers before invoking it. It must not invent EEPROM/certificate key contents.
+
+The PE32 validator rejects images with import, TLS, or delay-import directories until their startup handling is implemented. The mapper only supports HIGHLOW base relocations. A successful map is still not permission to execute: physical allocation, page permissions, memory aliases, kernel globals, boot parameters, and hardware initialization remain prerequisites.
