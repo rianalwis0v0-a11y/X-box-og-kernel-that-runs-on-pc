@@ -58,7 +58,7 @@ int main(void) {
     assert(page == 0x00104000u);
     assert((page & ((4u * PC_PHYSMEM_PAGE_SIZE) - 1u)) == 0u);
     assert(memory.free_pages == 27u);
-    assert(!pc_physmem_alloc_pages(&memory,3u,4u));
+    assert(!pc_physmem_alloc_pages(&memory,64u,4u));
     assert(!pc_physmem_alloc_pages(&memory,1u,3u));
     assert(!pc_physmem_alloc_pages(&memory,0u,1u));
 
