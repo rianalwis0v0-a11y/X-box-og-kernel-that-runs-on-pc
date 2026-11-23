@@ -153,6 +153,7 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
     const multiboot_info_min *info = (const multiboot_info_min *)(uintptr_t)multiboot_info_address;
     serial_init();
     PcGdtInstallFlatSegments();
+    serial_write("PC-HAL: flat GDT installed\n");
     PcIdtInstallExceptions();
     serial_write("PC-HAL: exception IDT installed (vectors 0-31)\n");
     serial_write("PC-HARNESS: entered 32-bit bare-metal kernel\n");
