@@ -32,6 +32,24 @@ static void test_rsdp_v1(void)
     assert(!PcAcpiValidateRsdp(rsdp, sizeof(rsdp), &out));
 }
 
+static void test_rsdp_scan(void)
+{
+    uint8_t region[96] = {0};
+    pc_acpi_rsdp_info out;
+    size_t offset = 0;
+    uint8_t *rsdp = region + 32u;
+    rsdp[0]='R'; rsdp[1]='S'; rsdp[2]='D'; rsdp[3]=' ';
+    rsdp[4]='P'; rsdp[5]='T'; rsdp[6]='R'; rsdp[7]=' ';
+    rsdp[15] = 0;
+    put32(rsdp + 16, 0x00123000u);
+    checksum(rsdp, 20u, 8u);
+    assert(PcAcpiFindRsdp(region, sizeof(region), &out, &offset));
+    assert(offset == 32u && out.rsdt_address == 0x00123000u);
+    region[32u + 9u] ^= 1u;
+    assert(!PcAcpiFindRsdp(region, sizeof(region), &out, &offset));
+    assert(!PcAcpiFindRsdp(region, 19u, &out, &offset));
+}
+
 static void test_madt(void)
 {
     uint8_t madt[66] = {0};
@@ -72,6 +90,7 @@ static void test_sdt_bounds(void)
 int main(void)
 {
     test_rsdp_v1();
+    test_rsdp_scan();
     test_madt();
     test_sdt_bounds();
     puts("ACPI RSDP/SDT/MADT parser tests passed");
