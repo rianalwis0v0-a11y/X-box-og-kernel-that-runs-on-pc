@@ -89,3 +89,10 @@ VOID __cdecl main(PUCHAR LoadOptions, const UCHAR *CryptKeys);
 The PC port now records this as the `xbox_pc_kernel_entry` function-pointer type. The first argument is the boot-loader options string; the second points to the two key blocks consumed by `RtlCopyMemory` in `main`. Their exact lengths and the required buffer layout must come from the matching `bldr.h` definitions and original boot-loader contract; this port does not fabricate key bytes or lengths.
 
 The PE32 loader now fails closed when import, TLS, or delay-import directories are present because no resolver/callback runner exists yet. This prevents treating a copied image as runnable when its startup dependencies have not been initialized.
+
+
+## 4 KiB page-table builder
+
+`pc_paging.c/.h` now provides a non-PAE 32-bit x86 page-table builder. It accepts caller-supplied page-aligned directory/table storage and explicit physical addresses, maps page-aligned virtual-to-physical ranges, supports supervisor/user and read-write permissions, rejects conflicting mappings, and preflights table capacity so a failed range map does not partially install entries.
+
+The builder does not allocate physical pages, parse firmware memory maps, enable CR0.PG, or choose Xbox virtual/physical aliases. Those are intentionally separate tasks: the next integration must reserve RAM from the Multiboot map, keep the PC loader/stack/Multiboot structures mapped, and establish the verified Xbox address layout before enabling paging or calling the Xbox entry.
