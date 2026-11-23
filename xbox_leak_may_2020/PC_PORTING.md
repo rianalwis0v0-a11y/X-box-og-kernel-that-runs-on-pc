@@ -135,3 +135,14 @@ The existing Xbox HAL source now has a compile-time `PC_COMPAT_GUEST` path:
 - `halx/sources` includes the guest adapter source and its include directory.
 
 This is a real source-level HAL split, but it is not yet a complete working PC HAL. The PC bootloader still must map/register the shared window and call `PcHalBindSharedWindow`; the host monitor must implement the VMCALL dispatcher, PCI/memory/timer responses, and clock interrupt injection. The original Xbox build remains unchanged when `PC_COMPAT_GUEST` is not defined; select the PC HAL with `PC_COMPAT_GUEST=1` in the legacy SOURCES build environment. The shared-window binding includes its mapped byte length, checks offset alignment and bounds, and the response header carries a bounded result count. No Xbox kernel boot or real-hardware test has been claimed.
+
+
+### Native bare-metal PC probe milestone (2026-11-23)
+
+- [x] Extend the standalone Multiboot v1 test kernel with ring-0 CPUID vendor detection.
+- [x] Parse the bootloader-supplied physical memory map with record-length and bounds checks.
+- [x] Enumerate PCI functions through native x86 configuration mechanism #1 (I/O ports 0xCF8/0xCFC).
+- [x] Detect NVIDIA NV2A PCI ID 10DE:02A0 when present; report absence honestly on ordinary PCs.
+- [x] Update QEMU CI to require these serial diagnostics.
+
+This is the first native hardware-access milestone: the harness executes directly in 32-bit protected mode and performs CPU/PCI I/O without a hypervisor. It still halts before loading the Xbox kernel. It does not yet install a complete IDT/exception path, enable a timer/interrupt controller, build Xbox-required page tables, or implement the Xbox kernel's PE loader/entry ABI. The VMCALL-based `PC_COMPAT_GUEST` path is not used by this bare-metal harness and must not be confused with it.
