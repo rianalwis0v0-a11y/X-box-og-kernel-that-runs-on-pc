@@ -121,3 +121,16 @@ The synthetic tests validate parser behavior; they are not evidence that the Xbo
 - [ ] Replace the original Xbox HAL's MCPX/SMC/SMBus/southbridge assumptions with PC implementations, subsystem by subsystem.
 
 Important distinction: these commits define and test the PC-facing contracts and reject malformed shared-memory submissions. They do not yet translate NV2A methods into GPU commands, provide a working D3D/Vulkan renderer, or boot the Xbox kernel. The Xbox kernel's existing hardware initialization must not be called against generic PC hardware.
+
+
+### PC HAL implementation progress (2026-11-23)
+
+The existing Xbox HAL source now has a compile-time `PC_COMPAT_GUEST` path:
+
+- `halx/i386/xxhal.c` skips Xbox APIC-disable, 8259 PIC, RTC, Xbox clock programming, MCPX southbridge setup, SMC/SMBus and SCI initialization in the PC guest path.
+- The PC path requires the boot handoff to call `PcHalBindSharedWindow(mapped_window, call_record_offset)` before `HalInitSystemPhase0`. The guest adapter issues the versioned `pc_platform_abi.h` VMCALL contract using only a registered shared-window offset; it does not pass guest pointers to the host.
+- The adapter validates the monitor handshake, requests the PC memory map, virtual PCI enumeration and monotonic timer information, then registers the kernel clock vector with the monitor in Phase 1.
+- `halx/i386/pcisetup.c` no longer programs Xbox MCPX/LPC/IDE/NIC/USB/audio/AGP PCI registers when built with `PC_COMPAT_GUEST`.
+- `halx/sources` includes the guest adapter source and its include directory.
+
+This is a real source-level HAL split, but it is not yet a complete working PC HAL. The PC bootloader still must map/register the shared window and call `PcHalBindSharedWindow`; the host monitor must implement the VMCALL dispatcher, PCI/memory/timer responses, and clock interrupt injection. The original Xbox build remains unchanged when `PC_COMPAT_GUEST` is not defined. No Xbox kernel boot or real-hardware test has been claimed.
