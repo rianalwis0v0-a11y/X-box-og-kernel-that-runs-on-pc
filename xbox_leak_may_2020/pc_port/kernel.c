@@ -272,7 +272,8 @@ static void report_pci(void) {
                     pc_pci_bar decoded_bars[PC_PCI_MAX_BARS];
                     uint32_t header_type = (function_header >> 16) & 0x7fu;
                     uint8_t bar_count = header_type == 0u ? 6u :
-                                        (header_type == 1u ? 2u : 0u);
+                                        (header_type == 1u ? 2u :
+                                         (header_type == 2u ? 1u : 0u));
                     uint8_t bar_index;
                     int decoded_count = -1;
                     uint8_t irq_line = PcHalNativePciRead8(
