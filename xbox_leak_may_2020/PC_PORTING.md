@@ -159,3 +159,15 @@ This is the first native hardware-access milestone: the harness executes directl
 - [ ] Await GitHub Actions run 101 for commit `efffdc7e6dedb8211e927f654da71f159dd13627`; it was still in progress at the time of this update.
 
 These checks harden validation only. The module is still not mapped into a new image layout, relocations/imports are not processed, page tables are not built, and the Xbox kernel entry is not called.
+
+
+### Stage 2 — bounded PE32 image mapper (2026-11-23)
+
+- [x] Add caller-buffer PE32 mapping: zero image, copy headers, copy section raw data to virtual addresses.
+- [x] Apply PE32 `IMAGE_REL_BASED_HIGHLOW` relocations when the requested load base differs from the preferred base.
+- [x] Reject missing/out-of-range relocation directories, malformed relocation blocks, out-of-image targets, and unsupported relocation types.
+- [x] Add native tests for section mapping, preferred-base entry calculation, relocated absolute addresses, and unsupported relocation rejection.
+- [ ] Confirm behavior against a matching, legally available original Xbox kernel image and its actual relocation table.
+- [ ] Implement page-table mappings, memory reservations, import resolution, XboxCryptKeys/LoadOptions contract, and the PC HAL shared-window handoff.
+
+The mapper writes only to a caller-provided buffer. It does not allocate physical memory, create page tables, set executable permissions, resolve imports, or call the entry point. It is not yet safe to execute xboxkrnl.exe.
