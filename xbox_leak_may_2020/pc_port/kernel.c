@@ -6,6 +6,7 @@
 #include "pc_physmem.h"
 #include "pc_paging.h"
 #include "pc_hal_native.h"
+#include "pc_pci.h"
 
 #define COM1 0x3F8u
 #define MULTIBOOT_BOOTLOADER_MAGIC 0x2BADB002u
@@ -259,10 +260,22 @@ static void report_pci(void) {
                 {
                     uint32_t class_info = PcHalNativePciRead32(
                         (uint8_t)bus, (uint8_t)device, (uint8_t)function, 0x08u);
-                    uint32_t bar0 = PcHalNativePciRead32(
-                        (uint8_t)bus, (uint8_t)device, (uint8_t)function, 0x10u);
+                    uint32_t raw_bars[PC_PCI_MAX_BARS];
+                    pc_pci_bar decoded_bars[PC_PCI_MAX_BARS];
+                    uint32_t header_type = (header >> 16) & 0x7fu;
+                    uint8_t bar_count = header_type == 0u ? 6u :
+                                        (header_type == 1u ? 2u : 0u);
+                    uint8_t bar_index;
+                    int decoded_count = -1;
                     uint8_t irq_line = PcHalNativePciRead8(
                         (uint8_t)bus, (uint8_t)device, (uint8_t)function, 0x3cu);
+                    for (bar_index = 0; bar_index < bar_count; ++bar_index)
+                        raw_bars[bar_index] = PcHalNativePciRead32(
+                            (uint8_t)bus, (uint8_t)device, (uint8_t)function,
+                            (uint8_t)(0x10u + bar_index * 4u));
+                    if (bar_count)
+                        decoded_count = PcPciDecodeBars(raw_bars, bar_count,
+                            decoded_bars, PC_PCI_MAX_BARS);
                     ++found;
                     serial_write("PC-HAL: PCI device ");
                     serial_hex(bus); serial_putc(':');
@@ -270,9 +283,29 @@ static void report_pci(void) {
                     serial_hex(function);
                     serial_write(" id="); serial_hex(id);
                     serial_write(" class="); serial_hex(class_info >> 8);
-                    serial_write(" BAR0="); serial_hex(bar0);
                     serial_write(" IRQ="); serial_hex(irq_line);
-                    serial_write("\\n");
+                    serial_write("\n");
+                    if (decoded_count >= 0) {
+                        int bar_number;
+                        for (bar_number = 0; bar_number < decoded_count; ++bar_number) {
+                            const pc_pci_bar *bar = &decoded_bars[bar_number];
+                            serial_write("PC-HAL: PCI BAR[");
+                            serial_hex(bar->slot);
+                            serial_write("] kind=");
+                            serial_hex(bar->kind);
+                            serial_write(" width=");
+                            serial_hex(bar->width);
+                            serial_write(" base-hi=");
+                            serial_hex((uint32_t)(bar->base >> 32));
+                            serial_write(" base-lo=");
+                            serial_hex((uint32_t)bar->base);
+                            serial_write(" prefetch=");
+                            serial_hex(bar->prefetchable);
+                            serial_write("\n");
+                        }
+                    } else if (bar_count) {
+                        serial_write("PC-HAL: PCI BAR decode rejected malformed BAR set\n");
+                    }
                 }
                 if (vendor == 0x10DEu && product == 0x02A0u) ++nv2a;
             }
