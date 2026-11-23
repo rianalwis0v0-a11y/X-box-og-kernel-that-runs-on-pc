@@ -282,7 +282,20 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
                                   0x10000000u, PC_PAGING_WRITE) &&
                     pc_paging_map(&xbox_page_tables, 0x80000000u, 0u,
                                   0x10000000u, PC_PAGING_WRITE)) {
-                    serial_write("PC-HAL: Xbox 256 MiB identity + 0x80000000 alias tables built (paging OFF)\n");
+                    uint32_t identity_pa, alias_pa, page_flags;
+                    if (xbox_page_tables.table_count == 128u &&
+                        pc_paging_translate(&xbox_page_tables, 0x00123456u,
+                                            &identity_pa, &page_flags) &&
+                        identity_pa == 0x00123456u &&
+                        page_flags == PC_PAGING_WRITE &&
+                        pc_paging_translate(&xbox_page_tables, 0x80123456u,
+                                            &alias_pa, &page_flags) &&
+                        alias_pa == 0x00123456u &&
+                        page_flags == PC_PAGING_WRITE) {
+                        serial_write("PC-HAL: Xbox 256 MiB identity + 0x80000000 alias tables verified (paging OFF)\n");
+                    } else {
+                        serial_write("PC-HAL: Xbox page-table translation self-test ERROR\n");
+                    }
                 } else {
                     serial_write("PC-HAL: Xbox page-table layout build ERROR\n");
                 }
