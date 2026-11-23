@@ -4,6 +4,7 @@ typedef struct __attribute__((packed)) { uint16_t offset_low, selector; uint8_t 
 typedef struct __attribute__((packed)) { uint16_t limit; uint32_t base; } PcIdtr;
 static PcIdtGate g_idt[256];
 extern uint32_t PcIsrStubTable[];
+extern uint32_t PcIrqStubTable[];
 static void PcSerialPutc(char c) {
     volatile uint8_t *lsr=(volatile uint8_t *)0x3fdu, *data=(volatile uint8_t *)0x3f8u;
     uint32_t timeout=1000000u;
@@ -24,6 +25,7 @@ void PcIdtInstallExceptions(void) {
     PcIdtr idtr; uint32_t i;
     for(i=0;i<256u;++i) { g_idt[i].offset_low=0; g_idt[i].selector=0; g_idt[i].zero=0; g_idt[i].type_attr=0; g_idt[i].offset_high=0; }
     for(i=0;i<32u;++i) PcIdtSetGate(i,(uintptr_t)PcIsrStubTable[i]);
+    for(i=0;i<16u;++i) PcIdtSetGate(0x30u+i,(uintptr_t)PcIrqStubTable[i]);
     idtr.limit=(uint16_t)(sizeof(g_idt)-1u); idtr.base=(uint32_t)(uintptr_t)g_idt;
     __asm__ volatile ("lidt %0" : : "m"(idtr) : "memory");
 }
