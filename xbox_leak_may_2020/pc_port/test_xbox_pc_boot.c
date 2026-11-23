@@ -79,6 +79,16 @@ int main(void) {
         assert(xbox_pc_load_pe32_image(&loaded_image,loaded,sizeof(loaded),
                                        0x81010000u,&entry));
         assert(get32(loaded+0x1004)==0x81123456u);
+        assert(!xbox_pc_load_pe32_image(&loaded_image,loaded,
+                                        (uint32_t)sizeof(loaded)-1u,
+                                        0x80010000u,&entry));
+        assert(!xbox_pc_load_pe32_image(&loaded_image,loaded,sizeof(loaded),
+                                        0xfffff000u,&entry));
+        loaded_image.entry_rva++;
+        assert(!xbox_pc_load_pe32_image(&loaded_image,loaded,sizeof(loaded),
+                                        0x80010000u,&entry));
+        make_reloc_image();
+        assert(xbox_pc_validate_pe32_file(image,sizeof(image),&loaded_image));
         put16(0x40a,0x5000); /* Unsupported relocation type must fail. */
         assert(xbox_pc_validate_pe32_file(image,sizeof(image),&loaded_image));
         assert(!xbox_pc_load_pe32_image(&loaded_image,loaded,sizeof(loaded),
