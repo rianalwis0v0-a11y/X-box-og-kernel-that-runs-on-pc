@@ -4,9 +4,12 @@
 /*
  * Guest-to-PC platform ABI for the Xbox x86 compatibility guest.
  *
- * Transport: VMCALL from the 32-bit guest. The monitor validates the
- * registered shared-memory window and copies request/reply records.
- * No guest virtual pointers cross this boundary.
+ * Transport: VMCALL from the 32-bit guest with EAX=magic, EBX=shared-window
+ * offset, ECX=record byte length and EDX=sequence (32-bit guest ABI).
+ * The monitor validates the registered shared-memory window and copies
+ * request/reply records. No guest virtual pointers cross this boundary.
+ * The request header is at shared_offset; operation-specific payload follows
+ * immediately after pc_platform_call. Host replies set status and result_count.
  *
  * This is an ABI contract only. It does not implement a VMM or claim that
  * any physical device is already supported.
