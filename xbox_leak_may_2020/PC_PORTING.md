@@ -22,7 +22,10 @@ Implement a small, independent x86 boot harness. It must not overwrite or patch 
 
 - [x] Select a first test path: Multiboot v1 via GRUB/QEMU, 32-bit protected mode. This validates the PC harness only; it is not the original Xbox firmware path.
 - [x] Confirm the Xbox HAL source is x86-specific; the isolated harness enters 32-bit protected mode.
-- [x] Install an IDT with fail-stop handlers for CPU exception vectors 0-31 in the independent PC harness.\n- [x] Install a flat 32-bit GDT and reload CS/data segments in the independent PC harness.\n- [x] Report fatal exception vector, error code, and EIP over serial.\n- [x] Add 8259 IRQ stubs, mask all IRQs except IRQ0, and run a PIT tick self-test.
+- [x] Install an IDT with fail-stop handlers for CPU exception vectors 0-31 in the independent PC harness.
+- [x] Install a flat 32-bit GDT and reload CS/data segments in the independent PC harness.
+- [x] Report fatal exception vector, error code, and EIP over serial.
+- [x] Add 8259 IRQ stubs, mask all IRQs except IRQ0, and run a PIT tick self-test.
 - [ ] Add IOAPIC/APIC support and robust spurious IRQ handling.
 - [x] Capture CPU vendor and parse the Multiboot physical memory map.
 - [x] Provide serial-console diagnostics and a deterministic fatal halt.
@@ -30,9 +33,11 @@ Implement a small, independent x86 boot harness. It must not overwrite or patch 
 
 ## Stage 2 — kernel image contract
 
-- [ ] Determine the kernel image format and entry-point contract from source/build metadata.
-- [ ] Verify section alignment, relocations, imports, symbols, and expected load address.
-- [ ] Implement only the required loader/relocation behavior, with bounds checks.
+- [x] Determine the kernel image format and entry-point contract from source/build metadata: PE32/i386 and `__cdecl main(LoadOptions, CryptKeys)`.
+- [ ] Verify the actual kernel's section alignment, relocation records, imports, symbols, and expected load address against a matching kernel image.
+- [x] Implement a bounded PE32 section mapper and HIGHLOW relocation path against synthetic fixtures; actual-kernel compatibility remains unverified.
+- [x] Reject unresolved import, TLS, and delay-import directories rather than executing an image with unsupported startup requirements.
+- [x] Add a caller-backed 32-bit 4 KiB page-table builder with bounds/conflict checks; physical allocation and paging activation remain open.
 - [ ] Confirm that the entry point can be reached and report its first diagnostic.
 - [ ] Do not guess Xbox memory addresses or silently map PC memory over them.
 
@@ -205,3 +210,10 @@ The page-table builder is unit-tested infrastructure only; the PC harness does n
 - [x] Add native tests to CI for mapping, translation, conflicts, range overflow, storage overlap, capacity exhaustion, and corrupted contexts.
 
 Limitations: this is a page-table data-structure builder only. It does not allocate or reserve physical RAM, enable CR0.PG, load CR3, handle PAE/long mode, or establish the Xbox kernel's required address-space layout. The PC loader must still reserve its own code/data, the kernel image, page tables, Multiboot data, and the shared HAL window before any mapping can be activated.
+
+
+### Current loader and memory milestones (2026-11-23)
+
+The original source file `xbox trunk/xbox/private/ntos/init/xboxkrnl.c` verifies the entry signature as `__cdecl main(PUCHAR LoadOptions, const UCHAR *CryptKeys)`. It copies two consecutive key blocks, each of size `XBOX_KEY_LENGTH`, into the EEPROM and certificate key globals, then calls `KiSystemStartup()`. The port exposes the function-pointer type but does not invent the key material or assume a length.
+
+The PE32 validator now rejects import, TLS, and delay-import directories because those mechanisms are not implemented. The PE mapper handles bounded section copying and HIGHLOW relocations. The page-table builder is implemented and host-tested, but does not allocate physical pages or turn paging on. The next required work is to reserve memory using the Multiboot map, identify the exact Xbox address aliases and loader data layout from `bldr32`/memory-manager source, and build the actual boot handoff.
