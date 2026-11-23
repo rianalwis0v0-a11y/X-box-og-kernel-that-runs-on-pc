@@ -7,6 +7,7 @@
 #include "pc_paging.h"
 #include "pc_hal_native.h"
 #include "pc_pci.h"
+#include "pc_acpi.h"
 
 #define COM1 0x3F8u
 #define MULTIBOOT_BOOTLOADER_MAGIC 0x2BADB002u
@@ -140,6 +141,53 @@ static void report_cpu(void) {
     serial_write(vendor);
     serial_write("\n");
 }
+static void report_acpi(void)
+{
+    pc_acpi_rsdp_info rsdp;
+    size_t offset = 0;
+    uint16_t ebda_segment = *(volatile const uint16_t *)(uintptr_t)0x40Eu;
+    uint32_t ebda = (uint32_t)ebda_segment << 4;
+    int found = 0;
+
+    /* The EBDA's first KiB is searched before the legacy BIOS area. */
+    if (ebda >= 0x80000u && ebda < 0xA0000u) {
+        size_t bytes = 0xA0000u - ebda;
+        if (bytes > 1024u) bytes = 1024u;
+        found = PcAcpiFindRsdp((const void *)(uintptr_t)ebda,
+                               bytes, &rsdp, &offset);
+        if (found) {
+            serial_write("PC-ACPI: RSDP found in EBDA at ");
+            serial_hex(ebda + (uint32_t)offset);
+            serial_write("\n");
+        }
+    }
+
+    if (!found) {
+        found = PcAcpiFindRsdp((const void *)(uintptr_t)0xE0000u,
+                               0x20000u, &rsdp, &offset);
+        if (found) {
+            serial_write("PC-ACPI: RSDP found in BIOS area at ");
+            serial_hex(0xE0000u + (uint32_t)offset);
+            serial_write("\n");
+        }
+    }
+
+    if (!found) {
+        serial_write("PC-ACPI: no valid RSDP found; firmware ACPI unavailable\n");
+        return;
+    }
+
+    serial_write("PC-ACPI: RSDP revision=");
+    serial_hex(rsdp.revision);
+    serial_write(" RSDT=");
+    serial_hex(rsdp.rsdt_address);
+    serial_write(" XSDT-hi=");
+    serial_hex((uint32_t)(rsdp.xsdt_address >> 32));
+    serial_write(" XSDT-lo=");
+    serial_hex((uint32_t)rsdp.xsdt_address);
+    serial_write("\n");
+}
+
 static void report_memory(const multiboot_info_min *info) {
     uint32_t offset = 0;
     uint64_t usable = 0;
@@ -344,6 +392,7 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
     serial_write("PC-HAL: executing ring-0 native x86 hardware probes\n");
     report_cpu();
     report_memory(info);
+    report_acpi();
     {
         int allocator_status =
             initialize_physical_allocator(info, multiboot_info_address);
