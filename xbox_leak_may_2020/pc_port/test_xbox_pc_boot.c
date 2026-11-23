@@ -26,6 +26,23 @@ static void make_image(void) {
     put32(sec+36,0x60000020);
     memset(image+0x200,0x90,0x200);
 }
+
+static uint8_t loaded[0x3000];
+static void make_reloc_image(void) {
+    const uint32_t pe=0x80, coff=pe+4, opt=coff+20, sec=opt+224;
+    make_image();
+    put16(coff+2,2);
+    put32(opt+56,0x3000);
+    put32(opt+96+5*8,0x2000);
+    put32(opt+96+5*8+4,12);
+    memcpy(image+sec+40,".reloc",6);
+    put32(sec+40+8,12); put32(sec+40+12,0x2000);
+    put32(sec+40+16,0x200); put32(sec+40+20,0x400);
+    put32(sec+40+36,0x42000040);
+    put32(0x204,0x80123456);
+    put32(0x400,0x1000); put32(0x404,12);
+    put16(0x408,0x3004); put16(0x40a,0);
+}
 int main(void) {
     xbox_pc_kernel_image out;
     make_image();
@@ -44,6 +61,25 @@ int main(void) {
     make_image(); put32(0x80+24+224+20,0x100);
     assert(!xbox_pc_validate_pe32_file(image,sizeof(image),&out));
 
-    puts("XBOX-PC-BOOT: PE32 validator tests PASS");
+
+    {
+        uint32_t entry=0;
+        xbox_pc_kernel_image loaded_image;
+        make_reloc_image();
+        assert(xbox_pc_validate_pe32_file(image,sizeof(image),&loaded_image));
+        assert(xbox_pc_load_pe32_image(&loaded_image,loaded,sizeof(loaded),
+                                       0x80010000u,&entry));
+        assert(entry==0x80011000u);
+        assert(loaded[0x1000]==0x90);
+        assert(loaded[0x1004]==0x80123456u);
+        assert(xbox_pc_load_pe32_image(&loaded_image,loaded,sizeof(loaded),
+                                       0x81010000u,&entry));
+        assert(loaded[0x1004]==0x81123456u);
+        put16(0x40a,0x5000); /* Unsupported relocation type must fail. */
+        assert(xbox_pc_validate_pe32_file(image,sizeof(image),&loaded_image));
+        assert(!xbox_pc_load_pe32_image(&loaded_image,loaded,sizeof(loaded),
+                                        0x81010000u,&entry));
+    }
+    puts("XBOX-PC-BOOT: PE32 validator and mapper tests PASS");
     return 0;
 }
