@@ -23,12 +23,7 @@ jobs:
       - name: Test PE32 image inspector
         run: python3 -m unittest discover -s xbox_leak_may_2020/pc_port -p 'test_*.py' -v
       - name: Test PC HAL and NV2A bridge contracts
-        run: |
-          gcc -std=c11 -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port \\
-            xbox_leak_may_2020/pc_port/pc_hal_contract.c \\
-            xbox_leak_may_2020/pc_port/nv2a_pc_bridge.c \\
-            xbox_leak_may_2020/pc_port/test_contracts.c -o /tmp/pc-port-contract-tests
-          /tmp/pc-port-contract-tests
+        run: gcc -std=c11 -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port xbox_leak_may_2020/pc_port/pc_hal_contract.c xbox_leak_may_2020/pc_port/nv2a_pc_bridge.c xbox_leak_may_2020/pc_port/test_contracts.c -o /tmp/pc-port-contract-tests && /tmp/pc-port-contract-tests
       - name: Validate existing NV2A bridge ABI layout
         run: gcc -std=c11 -Wall -Wextra -Werror -fsyntax-only xbox_leak_may_2020/pc_port/test_nv2a_abi.c
       - name: Install toolchain and emulator
