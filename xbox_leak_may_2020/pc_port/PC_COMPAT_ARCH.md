@@ -96,3 +96,8 @@ The PE32 loader now fails closed when import, TLS, or delay-import directories a
 `pc_paging.c/.h` now provides a non-PAE 32-bit x86 page-table builder. It accepts caller-supplied page-aligned directory/table storage and explicit physical addresses, maps page-aligned virtual-to-physical ranges, supports supervisor/user and read-write permissions, rejects conflicting mappings, and preflights table capacity so a failed range map does not partially install entries.
 
 The builder does not allocate physical pages, parse firmware memory maps, enable CR0.PG, or choose Xbox virtual/physical aliases. Those are intentionally separate tasks: the next integration must reserve RAM from the Multiboot map, keep the PC loader/stack/Multiboot structures mapped, and establish the verified Xbox address layout before enabling paging or calling the Xbox entry.
+
+
+## Xbox early paging layout (source-derived)
+
+The original `bldr32` startup maps the first 256 MiB identity and maps that same physical range at `0x80000000`. The PC harness now constructs this layout with a 32-bit two-level 4 KiB page-table builder backed by contiguous pages from the Multiboot physical allocator. The tables are not loaded into CR3 and CR0.PG is not set. Xbox ROM and GPU windows are not mapped; the PC implementation must replace them with explicit PC/monitor mappings before paging can be enabled.
