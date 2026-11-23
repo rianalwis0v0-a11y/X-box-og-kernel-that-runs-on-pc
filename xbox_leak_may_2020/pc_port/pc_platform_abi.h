@@ -65,7 +65,7 @@ typedef struct pc_platform_call {
     uint64_t shared_offset;
     uint64_t sequence;
     uint32_t status;
-    uint32_t reserved;
+    uint32_t result_count;
 } pc_platform_call;
 
 typedef struct pc_platform_memory_range {
