@@ -194,3 +194,14 @@ The QEMU pass is for the independent PC harness only. It does not load or execut
 - [ ] Build the Xbox memory map and invoke the source-verified two-argument cdecl entry only after valid load-options and crypt-key buffers are available.
 
 The page-table builder is unit-tested infrastructure only; the PC harness does not enable paging yet.
+
+
+### Stage 3 — initial non-PAE x86 page-table builder (2026-11-23)
+
+- [x] Add a caller-storage-backed 4 KiB, two-level 32-bit page-table builder in `pc_port/pc_paging.c`.
+- [x] Map aligned virtual-to-physical ranges with supervisor/write/user PTE flags.
+- [x] Preflight a whole range before modifying tables, so conflicts and capacity exhaustion do not partially map it.
+- [x] Add virtual-to-physical translation checks and reject malformed public context state.
+- [x] Add native tests to CI for mapping, translation, conflicts, range overflow, storage overlap, capacity exhaustion, and corrupted contexts.
+
+Limitations: this is a page-table data-structure builder only. It does not allocate or reserve physical RAM, enable CR0.PG, load CR3, handle PAE/long mode, or establish the Xbox kernel's required address-space layout. The PC loader must still reserve its own code/data, the kernel image, page tables, Multiboot data, and the shared HAL window before any mapping can be activated.
