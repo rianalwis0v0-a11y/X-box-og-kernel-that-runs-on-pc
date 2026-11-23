@@ -4,6 +4,7 @@
 #include "pc_gdt.h"
 #include "pc_irq.h"
 #include "pc_physmem.h"
+#include "pc_paging.h"
 
 #define COM1 0x3F8u
 #define MULTIBOOT_BOOTLOADER_MAGIC 0x2BADB002u
@@ -262,6 +263,29 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
                 serial_write("\n");
             } else {
                 serial_write("PC-HAL: physical allocator ERROR no free page\n");
+            }
+
+            /*
+             * bldr32 maps the first 256 MiB identity and aliases it at
+             * 0x80000000. Build the same two-level layout, but keep paging
+             * disabled until the PC-specific device map is complete.
+             */
+            {
+                uint32_t block = pc_physmem_alloc_pages(&physical_memory,
+                                                        129u, 1u);
+                if (block &&
+                    pc_paging_init(&xbox_page_tables,
+                        (uint32_t *)(uintptr_t)block, block,
+                        (uint32_t *)(uintptr_t)(block + PC_PAGING_PAGE_SIZE),
+                        block + PC_PAGING_PAGE_SIZE, 128u) &&
+                    pc_paging_map(&xbox_page_tables, 0u, 0u,
+                                  0x10000000u, PC_PAGING_WRITE) &&
+                    pc_paging_map(&xbox_page_tables, 0x80000000u, 0u,
+                                  0x10000000u, PC_PAGING_WRITE)) {
+                    serial_write("PC-HAL: Xbox 256 MiB identity + 0x80000000 alias tables built (paging OFF)\n");
+                } else {
+                    serial_write("PC-HAL: Xbox page-table layout build ERROR\n");
+                }
             }
         } else {
             serial_write("PC-HAL: physical allocator ERROR stage=");
