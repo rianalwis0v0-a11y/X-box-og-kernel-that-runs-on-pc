@@ -5,11 +5,18 @@ typedef struct __attribute__((packed)) { uint16_t limit; uint32_t base; } PcIdtr
 static PcIdtGate g_idt[256];
 extern uint32_t PcIsrStubTable[];
 extern uint32_t PcIrqStubTable[];
+static uint8_t PcSerialIn(uint16_t port) {
+    uint8_t value;
+    __asm__ volatile ("inb %1, %0" : "=a"(value) : "Nd"(port));
+    return value;
+}
+static void PcSerialOut(uint16_t port, uint8_t value) {
+    __asm__ volatile ("outb %0, %1" : : "a"(value), "Nd"(port));
+}
 static void PcSerialPutc(char c) {
-    volatile uint8_t *lsr=(volatile uint8_t *)0x3fdu, *data=(volatile uint8_t *)0x3f8u;
     uint32_t timeout=1000000u;
-    while (((*lsr)&0x20u)==0u && --timeout) { }
-    if(timeout) *data=(uint8_t)c;
+    while ((PcSerialIn(0x3fdu)&0x20u)==0u && --timeout) { }
+    if(timeout) PcSerialOut(0x3f8u,(uint8_t)c);
 }
 static void PcSerialText(const char *s) { while(*s) { if(*s=='\n') PcSerialPutc('\r'); PcSerialPutc(*s++); } }
 static void PcSerialHex(uint32_t v) {
