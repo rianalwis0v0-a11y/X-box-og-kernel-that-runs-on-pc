@@ -29,6 +29,8 @@ jobs:
           xbox_leak_may_2020/pc_port/nv2a_pc_bridge.c
           xbox_leak_may_2020/pc_port/test_contracts.c
           -o /tmp/pc-port-contract-tests && /tmp/pc-port-contract-tests
+      - name: Test NV2A shared-memory transport bounds
+        run: gcc -std=c11 -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port xbox_leak_may_2020/pc_port/nv2a_transport.c xbox_leak_may_2020/pc_port/test_nv2a_transport.c -o /tmp/nv2a-transport-tests && /tmp/nv2a-transport-tests
       - name: Validate existing NV2A bridge ABI layout
         run: gcc -std=c11 -Wall -Wextra -Werror -fsyntax-only xbox_leak_may_2020/pc_port/test_nv2a_abi.c
       - name: Validate PC platform hypercall ABI
