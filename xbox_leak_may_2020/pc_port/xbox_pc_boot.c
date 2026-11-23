@@ -51,7 +51,7 @@ int xbox_pc_validate_pe32_file(const uint8_t *f, uint32_t n,
     uint16_t sections, opt_size;
     int entry_executable = 0;
 
-    if (!f || n < 0x40u || rd16(f) != 0x5a4du) return 0;
+    if (!f || !out || n < 0x40u || rd16(f) != 0x5a4du) return 0;
     pe = rd32(f + 0x3cu);
     if (!span_ok(pe, 24u, n) || rd32(f + pe) != 0x00004550u) return 0;
     if (rd16(f + pe + 4u) != PE_MACHINE_I386) return 0;
@@ -115,10 +115,17 @@ int xbox_pc_load_pe32_image(const xbox_pc_kernel_image *image,
     const uint8_t *f;
     uint32_t pe, opt, sec, i, delta, reloc_rva, reloc_size, cursor;
     uint16_t sections, opt_size;
+    xbox_pc_kernel_image checked;
     if (!image || !image->file || !destination || !entry_address ||
         destination_size < image->image_size ||
         image->image_size > UINT32_MAX - load_base ||
-        image->entry_rva >= image->image_size)
+        image->entry_rva >= image->image_size ||
+        !xbox_pc_validate_pe32_file(image->file, image->file_size, &checked) ||
+        checked.preferred_base != image->preferred_base ||
+        checked.entry_rva != image->entry_rva ||
+        checked.image_size != image->image_size ||
+        checked.headers_size != image->headers_size ||
+        checked.section_count != image->section_count)
         return 0;
     f = image->file;
     if (image->file_size < 0x40u) return 0;
@@ -174,9 +181,12 @@ int xbox_pc_load_pe32_image(const xbox_pc_kernel_image *image,
             for (j = 0; j < count; ++j) {
                 uint16_t item = rd16(destination + reloc_rva + cursor + 8u + j * 2u);
                 uint16_t type = item >> 12;
-                uint32_t target = block_rva + (item & 0x0fffu);
+                uint32_t offset = item & 0x0fffu;
+                uint32_t target;
                 uint32_t value;
                 if (type == 0u) continue; /* IMAGE_REL_BASED_ABSOLUTE */
+                if (block_rva > UINT32_MAX - offset) return 0;
+                target = block_rva + offset;
                 if (type != 3u || !span_ok(target, 4u, image->image_size))
                     return 0; /* Only IMAGE_REL_BASED_HIGHLOW is supported. */
                 value = rd32(destination + target);
