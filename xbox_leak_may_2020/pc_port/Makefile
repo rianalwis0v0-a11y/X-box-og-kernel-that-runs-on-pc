@@ -15,7 +15,7 @@ check-tools:
 boot.o: boot.S | check-tools
 	$(AS) $(CFLAGS) -c $< -o $@
 
-kernel.o: kernel.c xbox_pc_boot.h | check-tools
+kernel.o: kernel.c xbox_pc_boot.h pc_idt.h | check-tools
 	$(CC) $(CFLAGS) -c $< -o $@
 
 pc_idt.o: pc_idt.c pc_idt.h | check-tools
@@ -28,7 +28,7 @@ xbox_pc_boot.o: xbox_pc_boot.c xbox_pc_boot.h | check-tools
 	$(CC) $(CFLAGS) -c $< -o $@
 
 pc-harness.elf: boot.o kernel.o xbox_pc_boot.o pc_idt.o exception_stubs.o linker.ld
-	$(LD) $(LDFLAGS) -o $@ boot.o kernel.o xbox_pc_boot.o
+	$(LD) $(LDFLAGS) -o $@ boot.o kernel.o xbox_pc_boot.o pc_idt.o exception_stubs.o
 	@file $@
 
 clean:
