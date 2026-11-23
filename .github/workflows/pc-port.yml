@@ -1,0 +1,20 @@
+name: PC port contract
+
+on:
+  push:
+    paths:
+      - "pc-port/**"
+      - ".github/workflows/pc-port.yml"
+  pull_request:
+    paths:
+      - "pc-port/**"
+      - ".github/workflows/pc-port.yml"
+  workflow_dispatch:
+
+jobs:
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test boot contract
+        run: make -C pc-port test
