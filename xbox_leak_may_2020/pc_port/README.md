@@ -80,3 +80,6 @@ This is still a reservation/allocator self-test. The allocated page is not yet u
 ## Physical memory and Xbox page-table layout
 
 The harness now initializes a 4 GiB-bounded physical-page bitmap from the Multiboot memory map, reserving the kernel, boot metadata, modules, low memory, and conventional MMIO windows. It allocates contiguous storage for one page directory and 128 page tables, then builds the source-verified 256 MiB identity mapping and the 0x80000000 alias with 4 KiB pages. Paging deliberately remains disabled; this validates the layout without jumping into the Xbox kernel or assuming PC MMIO is Xbox hardware.
+
+
+The current GitHub Actions run [45186680707](https://github.com/rianalwis0v0-a11y/X-box-og-kernel-that-runs-on-pc/actions/runs/45186680707) passed end-to-end: native allocator tests, freestanding allocator compilation, page-table builder tests, 32-bit harness build, Multiboot validation, and QEMU serial checks for physical allocation and the Xbox 256 MiB identity/high-alias table layout. Paging remains off and the Xbox kernel is not executed.
