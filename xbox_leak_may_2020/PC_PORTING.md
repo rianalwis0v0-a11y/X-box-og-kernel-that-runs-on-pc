@@ -118,7 +118,8 @@ The synthetic tests validate parser behavior; they are not evidence that the Xbo
 - [ ] Implement the command-ring consumer and actual NV2A pushbuffer/method decoder.
 - [ ] Connect the decoder to the existing NV2A register/state model and shader translator.
 - [ ] Implement a real host renderer backend (D3D or Vulkan) and verify clear → triangle → present.
-- [ ] Replace the original Xbox HAL's MCPX/SMC/SMBus/southbridge assumptions with PC implementations, subsystem by subsystem.
+- [x] Add a `PC_COMPAT_GUEST` HAL path that delegates platform discovery and interrupt registration through the PC shared-memory/VMCALL ABI; bypass Xbox MCPX/LPC/8259/RTC/southbridge setup in that build.
+- [ ] Connect the PC boot handoff to `PcHalBindSharedWindow` and implement the host VMCALL dispatcher, PCI/memory/timer responses, and clock interrupt injection.
 
 Important distinction: these commits define and test the PC-facing contracts and reject malformed shared-memory submissions. They do not yet translate NV2A methods into GPU commands, provide a working D3D/Vulkan renderer, or boot the Xbox kernel. The Xbox kernel's existing hardware initialization must not be called against generic PC hardware.
 
