@@ -241,3 +241,15 @@ Verified in [GitHub Actions run 45185239535](https://github.com/rianalwis0v0-a11
 - [x] Add native tests and freestanding 32-bit compile checks to GitHub Actions.
 
 The allocator uses caller-owned bitmap storage (128 KiB for the 4 GiB/4 KiB page domain). It does not yet reserve the actual running harness, Multiboot structures, kernel module, page-table storage, firmware regions, or MMIO ranges automatically. The boot path must supply those reservations before allocating pages. It is not yet connected to pc_paging and paging remains disabled.
+
+
+### Bare-metal physical allocator integration (2026-11-23)
+
+- [x] Link the physical page allocator into the Multiboot PC harness.
+- [x] Export linker symbols delimiting the complete loaded kernel image, including its stack and bitmap storage.
+- [x] Reserve the low 1 MiB, kernel image, Multiboot v1 information block, memory-map bytes, command line, module descriptor table, module payloads and module names.
+- [x] Explicitly reserve legacy VGA and local/IO APIC MMIO windows.
+- [x] Allocate one physical page after reservations and print its address over COM1.
+- [ ] Confirm the integrated QEMU boot test passes on the latest commit.
+
+The allocator is now exercised by the real bare-metal harness, not only its native unit test. It still does not feed page-table construction or enable CR0.PG/CR3; the allocated page is a diagnostic self-test. PCI BAR MMIO ranges and the exact Xbox kernel virtual layout still require discovery/reservation before paging is activated.
