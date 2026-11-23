@@ -10,7 +10,8 @@ static int aligned_page(uint32_t value) {
 }
 
 static int context_valid(const pc_paging_context *c) {
-    uint32_t i;
+    uint32_t i, table_bytes;
+    uintptr_t directory_va, tables_va;
     if (!c || !c->directory || !c->tables || !c->table_capacity ||
         c->table_capacity > PC_PAGING_ENTRIES ||
         c->table_count > c->table_capacity ||
@@ -18,6 +19,14 @@ static int context_valid(const pc_paging_context *c) {
         !aligned_page(c->tables_physical) ||
         ((uintptr_t)c->directory & (PC_PAGING_PAGE_SIZE - 1u)) ||
         ((uintptr_t)c->tables & (PC_PAGING_PAGE_SIZE - 1u)))
+        return 0;
+    table_bytes = c->table_capacity * PC_PAGING_PAGE_SIZE;
+    directory_va = (uintptr_t)c->directory;
+    tables_va = (uintptr_t)c->tables;
+    if (directory_va > UINTPTR_MAX - PC_PAGING_PAGE_SIZE ||
+        tables_va > UINTPTR_MAX - table_bytes ||
+        (directory_va < tables_va + table_bytes &&
+         tables_va < directory_va + PC_PAGING_PAGE_SIZE))
         return 0;
     for (i = 0; i < PC_PAGING_ENTRIES; ++i) {
         int16_t slot = c->table_slot[i];
@@ -44,6 +53,15 @@ int pc_paging_init(pc_paging_context *c,
     if (tables_physical > UINT32_MAX - table_bytes ||
         directory_physical > UINT32_MAX - PC_PAGING_PAGE_SIZE)
         return 0;
+    {
+        uintptr_t directory_va = (uintptr_t)directory;
+        uintptr_t tables_va = (uintptr_t)tables;
+        if (directory_va > UINTPTR_MAX - PC_PAGING_PAGE_SIZE ||
+            tables_va > UINTPTR_MAX - table_bytes ||
+            (directory_va < tables_va + table_bytes &&
+             tables_va < directory_va + PC_PAGING_PAGE_SIZE))
+            return 0;
+    }
     if (directory_physical < tables_physical + table_bytes &&
         tables_physical < directory_physical + PC_PAGING_PAGE_SIZE)
         return 0;
