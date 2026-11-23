@@ -256,13 +256,21 @@ static void report_pci(void) {
                     PcHalNativePciRead32((uint8_t)bus, (uint8_t)device, (uint8_t)function, 0);
                 uint32_t vendor = id & 0xFFFFu;
                 uint32_t product = id >> 16;
+                uint32_t function_header;
                 if (vendor == 0xFFFFu) continue;
+                /*
+                 * Header layout belongs to each PCI function. Do not reuse
+                 * function 0's BAR count for functions 1-7.
+                 */
+                function_header = function == 0 ? header :
+                    PcHalNativePciRead32((uint8_t)bus, (uint8_t)device,
+                                         (uint8_t)function, 0x0Cu);
                 {
                     uint32_t class_info = PcHalNativePciRead32(
                         (uint8_t)bus, (uint8_t)device, (uint8_t)function, 0x08u);
                     uint32_t raw_bars[PC_PCI_MAX_BARS];
                     pc_pci_bar decoded_bars[PC_PCI_MAX_BARS];
-                    uint32_t header_type = (header >> 16) & 0x7fu;
+                    uint32_t header_type = (function_header >> 16) & 0x7fu;
                     uint8_t bar_count = header_type == 0u ? 6u :
                                         (header_type == 1u ? 2u : 0u);
                     uint8_t bar_index;
