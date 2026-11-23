@@ -29,6 +29,12 @@ The harness now accepts an `xboxkrnl.exe` Multiboot module and validates its PE3
 
 This is deliberately a validation milestone, not a kernel launch: it does not yet map sections, apply PE relocations, resolve imports, initialize the Xbox kernel's expected boot parameters/crypt-key ABI, or jump to its entry point. The original Xbox `preldr32` depends on Xbox ROM/MCPX key material and cannot run unchanged on a PC. The next port step is a PC-native replacement for the ROM-loading portion of `bldr32`, while preserving the original kernel image and its own XBE loader.
 
+## Native PC HAL primitives (new foundation)
+
+`pc_hal_native.c/.h` adds direct ring-0 x86 I/O primitives, a dual-8259 PIC remap to the Xbox HAL's existing vector base (0x30/0x38), and PCI Configuration Mechanism #1 reads through 0xCF8/0xCFC. The PIC is left fully masked; these routines do not install an IDT, enable an IRQ, or start a clock. PCI access preserves the caller's interrupt-enable state.
+
+This is a native hardware path, not a VMCALL adapter. It is currently a separately compiled porting module: it has **not** yet replaced the Xbox HAL's initialization call sites or been built with the original Xbox NT DDK toolchain. The PCI config path is only the legacy mechanism #1 256-byte configuration space; ACPI, APIC routing, timer calibration, DMA, storage, and interrupt dispatch remain to be implemented and integrated. The module must run only at ring 0 with a valid x86 environment.
+
 ## Critical limitation
 
 This proves only the standalone native PC harness and its early hardware probes. It does **not** load or boot the original Xbox kernel. The Xbox kernel still needs a verified PE32 loader/relocation/import path, its exact boot handoff, native replacement implementations for Xbox-specific HAL services, and integration of the NV2A translation layer. The existing `PC_COMPAT_GUEST` VMCALL adapter is a separate hypervisor-guest experiment; it is not used by this bare-metal harness.
