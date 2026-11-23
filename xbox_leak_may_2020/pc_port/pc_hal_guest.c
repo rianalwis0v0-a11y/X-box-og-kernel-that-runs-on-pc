@@ -8,11 +8,14 @@
 
 static volatile unsigned char *g_shared;
 static uint64_t g_call_offset;
+static size_t g_shared_bytes;
 static uint64_t g_sequence;
 
-void PcHalBindSharedWindow(volatile void *mapping, uint64_t call_record_offset)
+void PcHalBindSharedWindow(volatile void *mapping, size_t mapping_bytes,
+                           uint64_t call_record_offset)
 {
     g_shared = (volatile unsigned char *)mapping;
+    g_shared_bytes = mapping_bytes;
     g_call_offset = call_record_offset;
     g_sequence = 0;
 }
@@ -33,10 +36,11 @@ static uint32_t PcHalHypercall(uint64_t sharedOffset, uint32_t bytes, uint64_t s
         mov result, eax
     }
 #elif defined(__i386__)
+    result = PC_PLATFORM_CALL_MAGIC;
     __asm__ volatile ("vmcall"
-        : "=a"(result)
-        : "a"(PC_PLATFORM_CALL_MAGIC), "b"((uint32_t)sharedOffset),
-          "c"(bytes), "d"((uint32_t)sequence)
+        : "+a"(result)
+        : "b"((uint32_t)sharedOffset), "c"(bytes),
+          "d"((uint32_t)sequence)
         : "memory");
 #else
 #error PC_COMPAT_GUEST requires a 32-bit x86 VMCALL build
@@ -52,7 +56,9 @@ static uint32_t PcHalInvoke(uint32_t operation, uint32_t payload_bytes)
     uint32_t status;
 
     if (!g_shared || g_call_offset > 0xFFFFFFFFULL ||
-        total > PC_PLATFORM_MAX_RECORD_BYTES)
+        (g_call_offset & 7u) != 0 || g_call_offset > g_shared_bytes ||
+        total > g_shared_bytes - (size_t)g_call_offset ||
+        total > PC_PLATFORM_MAX_RECORD_BYTES || g_sequence >= 0xFFFFFFFFULL)
         return PC_PLATFORM_E_INVALID;
 
     call = (volatile pc_platform_call *)(g_shared + (size_t)g_call_offset);
