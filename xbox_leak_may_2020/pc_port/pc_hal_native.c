@@ -38,6 +38,25 @@ void PcHalNativeEnableInterrupts(void) { __asm__ volatile ("sti" ::: "memory"); 
 #error "PC native HAL requires an x86 compiler target"
 #endif
 
+static uint32_t PcHalNativeSaveAndDisableInterrupts(void)
+{
+#if defined(_MSC_VER) && defined(_M_IX86)
+    uint32_t flags;
+    __asm { pushfd; pop eax; mov flags, eax; cli }
+    return flags;
+#else
+    uint32_t flags;
+    __asm__ volatile ("pushfl; popl %0; cli" : "=r"(flags) :: "memory");
+    return flags;
+#endif
+}
+
+static void PcHalNativeRestoreInterrupts(uint32_t flags)
+{
+    if ((flags & 0x200u) != 0u) PcHalNativeEnableInterrupts();
+    else PcHalNativeDisableInterrupts();
+}
+
 static void PcHalNativeIoWait(void)
 {
     PcHalNativeOut8(0x80u, 0u);
@@ -45,6 +64,7 @@ static void PcHalNativeIoWait(void)
 
 void PcHalNativePicRemapMasked(void)
 {
+    uint32_t flags = PcHalNativeSaveAndDisableInterrupts();
     /* ICW1: initialize both PICs; ICW4: 8086 mode. */
     PcHalNativeOut8(0x21u, 0xffu);
     PcHalNativeOut8(0xa1u, 0xffu);
@@ -59,6 +79,7 @@ void PcHalNativePicRemapMasked(void)
     /* Keep all IRQs masked until the kernel has installed its IDT handlers. */
     PcHalNativeOut8(0x21u, 0xffu);
     PcHalNativeOut8(0xa1u, 0xffu);
+    PcHalNativeRestoreInterrupts(flags);
 }
 
 uint32_t PcHalNativePciRead32(uint8_t bus, uint8_t device,
@@ -66,12 +87,13 @@ uint32_t PcHalNativePciRead32(uint8_t bus, uint8_t device,
 {
     uint32_t address;
     uint32_t value;
+    uint32_t flags;
     if (device >= 32u || function >= 8u || (offset & 3u) != 0u)
         return 0xffffffffu;
     address = 0x80000000u | ((uint32_t)bus << 16) |
               ((uint32_t)device << 11) | ((uint32_t)function << 8) |
               (uint32_t)offset;
-    PcHalNativeDisableInterrupts();
+    flags = PcHalNativeSaveAndDisableInterrupts();
 #if defined(_MSC_VER) && defined(_M_IX86)
     __asm {
         mov dx, 0xcf8
@@ -85,6 +107,6 @@ uint32_t PcHalNativePciRead32(uint8_t bus, uint8_t device,
     __asm__ volatile ("outl %0, %1" : : "a"(address), "Nd"((uint16_t)0xcf8));
     __asm__ volatile ("inl %1, %0" : "=a"(value) : "Nd"((uint16_t)0xcfc));
 #endif
-    PcHalNativeEnableInterrupts();
+    PcHalNativeRestoreInterrupts(flags);
     return value;
 }
