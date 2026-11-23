@@ -141,24 +141,14 @@ Return Value:
 --*/
 {
 #ifdef PC_COMPAT_GUEST
-    /* No Xbox LPC hardware-monitor pin exists on a standard PC. */
-#else
-
-#ifdef PC_COMPAT_GUEST
     if (!PcHalInitializePlatform()) {
         KeBugCheck(0x50434841);
     }
 #else
-
-    //
-    // Initialize the 8259 programmable interrupt controller.  Note that
-    // this will enable interrupts.
-    //
-
     HalPulseHardwareMonitorPin();
     HalpInitializePICs();
 #endif
-#endif
+
 }
 
 VOID
@@ -247,20 +237,16 @@ Return Value:
 
 --*/
 {
-    //
-    // Don't pulse the hardware monitor pin if this is a quick boot or a shadow
-    // boot.
-    //
-
+#ifdef PC_COMPAT_GUEST
+    /* No Xbox LPC hardware-monitor pin exists on a standard PC. */
+#else
     if (!KeHasQuickBooted &&
         ((XboxBootFlags & XBOX_BOOTFLAG_SHADOW) == 0)) {
-
         _outp(XPCICFG_LPCBRIDGE_IO_REGISTER_BASE_0 + 0xCF, 0x05);
-
         KeStallExecutionProcessor(5);
-
         _outp(XPCICFG_LPCBRIDGE_IO_REGISTER_BASE_0 + 0xCF, 0x04);
-
         KeStallExecutionProcessor(5);
     }
+#endif
+
 }
