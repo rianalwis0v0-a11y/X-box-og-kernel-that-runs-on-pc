@@ -1,0 +1,42 @@
+name: PC boot harness
+
+on:
+  push:
+    paths:
+      - "xbox_leak_may_2020/pc_port/**"
+      - ".github/workflows/pc-harness.yml"
+  pull_request:
+    paths:
+      - "xbox_leak_may_2020/pc_port/**"
+      - ".github/workflows/pc-harness.yml"
+  workflow_dispatch:
+
+jobs:
+  build-and-boot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain and emulator
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib grub-pc-bin qemu-system-x86
+      - name: Build standalone 32-bit harness
+        working-directory: xbox_leak_may_2020/pc_port
+        run: make CROSS=
+      - name: Validate Multiboot header
+        working-directory: xbox_leak_may_2020/pc_port
+        run: grub-file --is-x86-multiboot pc-harness.elf
+      - name: Boot in QEMU and verify serial diagnostics
+        working-directory: xbox_leak_may_2020/pc_port
+        shell: bash
+        run: |
+          set +e
+          timeout 8s qemu-system-i386 -kernel pc-harness.elf -display none -serial stdio -monitor none -no-reboot -no-shutdown > qemu.log 2>&1
+          status=$?
+          set -e
+          cat qemu.log
+          grep -F "PC-HARNESS: entered 32-bit kernel" qemu.log
+          grep -F "PC-HARNESS: Multiboot magic PASS" qemu.log
+          grep -F "PC-HARNESS: serial PASS" qemu.log
+          grep -F "PC-HARNESS: halting (Xbox kernel not loaded)" qemu.log
+          test "$status" -eq 124
