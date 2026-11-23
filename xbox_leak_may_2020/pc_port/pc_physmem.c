@@ -143,3 +143,39 @@ uint32_t pc_physmem_alloc_page(pc_physmem *m) {
     }
     return 0;
 }
+
+
+uint32_t pc_physmem_alloc_pages(pc_physmem *m, uint32_t page_count,
+                                uint32_t alignment_pages) {
+    uint32_t pass, pass_start;
+    if (!m || !m->bitmap || !page_count || !alignment_pages ||
+        (alignment_pages & (alignment_pages - 1u)) ||
+        page_count > m->free_pages ||
+        m->bitmap_bytes < PC_PHYSMEM_BITMAP_BYTES ||
+        page_count > PC_PHYSMEM_PAGE_COUNT)
+        return 0;
+
+    for (pass = 0; pass < 2u; ++pass) {
+        uint32_t candidate, limit;
+        pass_start = pass == 0u && m->search_hint < PC_PHYSMEM_PAGE_COUNT
+                   ? m->search_hint : 1u;
+        limit = pass == 0u ? PC_PHYSMEM_PAGE_COUNT : m->search_hint;
+        if (pass_start < 1u) pass_start = 1u;
+        candidate = (pass_start + alignment_pages - 1u) &
+                    ~(alignment_pages - 1u);
+        while (candidate <= limit && page_count <= limit - candidate) {
+            uint32_t i;
+            for (i = 0; i < page_count && !bit_get(m, candidate + i); ++i) { }
+            if (i == page_count) {
+                uint32_t base = candidate * PC_PHYSMEM_PAGE_SIZE;
+                for (i = 0; i < page_count; ++i)
+                    bit_set(m, candidate + i, 1);
+                m->search_hint = candidate + page_count;
+                return base;
+            }
+            candidate = (candidate + i + 1u + alignment_pages - 1u) &
+                        ~(alignment_pages - 1u);
+        }
+    }
+    return 0;
+}
