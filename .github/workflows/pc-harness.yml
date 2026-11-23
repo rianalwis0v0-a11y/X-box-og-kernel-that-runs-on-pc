@@ -93,7 +93,8 @@ jobs:
           grep -F "PC-HARNESS: Multiboot handoff PASS" qemu.log
           grep -F "PC-HAL: executing ring-0 native x86 hardware probes" qemu.log
           grep -F "PC-HAL: CPU vendor" qemu.log
-          grep -F "PC-HAL: PCI functions found=" qemu.log
+          grep -F "PC-HAL: PCI device " qemu.log
+grep -F "PC-HAL: PCI functions found=" qemu.log
           grep -F "PC-HAL: physical allocator PASS page=" qemu.log
           grep -F "PC-HAL: Xbox 256 MiB identity + 0x80000000 alias tables verified (paging OFF)" qemu.log
           grep -F "PC-HAL: physical allocator PASS page=" qemu.log
