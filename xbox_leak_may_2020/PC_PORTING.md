@@ -80,3 +80,17 @@ Source analysis has confirmed these concrete facts:
 The independent PC harness, Makefile, linker script, serial diagnostics, and QEMU CI workflow have been committed under pc_port/. GitHub Actions run #1 is building the harness. Its result must be checked before marking the harness milestone complete.
 
 Next engineering task: inspect bootx/bldr32 startup/loader contract and the halx/i386 initialization dependencies, then define the smallest PC loader-to-kernel handoff. Do not call the original Xbox preloader on a PC: its ROM signature/decryption and fixed-address assumptions are platform-specific.
+
+
+## Stage 1 result and Stage 2 contract findings (2026-11-23)
+
+- [x] Inspect the original `bootx/bldr32` source manifest and 32-bit startup assembly.
+- [x] Identify the C bootloader's kernel-entry call contract.
+- [x] Document why the original ROM preloader is not a PC boot path.
+- [x] Document Xbox-specific early HAL dependencies and the PC loader design.
+
+See [PC_BOOT_CONTRACT.md](PC_BOOT_CONTRACT.md) for source-level evidence and the detailed handoff analysis.
+
+Verified from `bldr32.c`: the kernel is called as a cdecl function taking two arguments, `LoadOptions` and `CryptKeys`. The entry address is calculated from the PE NT header's `AddressOfEntryPoint` plus `PsNtosImageBase`. The Xbox startup assembly establishes paging and Xbox-specific physical mappings before that call. A Multiboot entry is therefore not a substitute for the Xbox bootloader contract.
+
+Next implementation: add a bounded PE32 inspection utility and tests. It must validate the actual kernel image format and section/relocation metadata without executing the image. Kernel execution remains gated on a complete memory/CPU/HAL handoff contract.
