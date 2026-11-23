@@ -19,6 +19,29 @@ static int checksum_ok(const uint8_t *p, size_t length)
     return sum == 0;
 }
 
+int PcAcpiFindRsdp(const void *region, size_t available,
+                   pc_acpi_rsdp_info *out, size_t *out_offset)
+{
+    const uint8_t *bytes = (const uint8_t *)region;
+    size_t offset;
+    if (!bytes || !out || available < 20u) return 0;
+
+    /* ACPI RSDP candidates are 16-byte aligned. */
+    for (offset = 0; offset <= available - 20u; offset += 16u) {
+        size_t remaining = available - offset;
+        if (bytes[offset] == 'R' && bytes[offset + 1u] == 'S' &&
+            bytes[offset + 2u] == 'D' && bytes[offset + 3u] == ' ' &&
+            bytes[offset + 4u] == 'P' && bytes[offset + 5u] == 'T' &&
+            bytes[offset + 6u] == 'R' && bytes[offset + 7u] == ' ' &&
+            PcAcpiValidateRsdp(bytes + offset, remaining, out)) {
+            if (out_offset) *out_offset = offset;
+            return 1;
+        }
+        if (offset > SIZE_MAX - 16u) break;
+    }
+    return 0;
+}
+
 int PcAcpiValidateRsdp(const void *data, size_t available,
                        pc_acpi_rsdp_info *out)
 {
