@@ -171,3 +171,12 @@ These checks harden validation only. The module is still not mapped into a new i
 - [ ] Implement page-table mappings, memory reservations, import resolution, XboxCryptKeys/LoadOptions contract, and the PC HAL shared-window handoff.
 
 The mapper writes only to a caller-provided buffer. It does not allocate physical memory, create page tables, set executable permissions, resolve imports, or call the entry point. It is not yet safe to execute xboxkrnl.exe.
+
+
+### PE32 mapper verification update
+
+- [x] Native PE32 validator + mapper tests passed in GitHub Actions run [45184279152](https://github.com/rianalwis0v0-a11y/X-box-og-kernel-that-runs-on-pc/actions/runs/45184279152), commit `95628a5336da178fbacb008c83aa7899bff50d44`.
+- [x] The same workflow completed the standalone 32-bit build, Multiboot header validation, and QEMU serial boot checks successfully.
+- [ ] Re-run CI after the follow-up hardening for caller-supplied metadata and relocation arithmetic (commits after `95628a5`).
+
+The QEMU pass is for the independent PC harness only. It does not load or execute the Xbox kernel image.
