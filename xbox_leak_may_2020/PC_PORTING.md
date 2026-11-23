@@ -268,3 +268,16 @@ The allocator is now exercised by the real bare-metal harness, not only its nati
 - [ ] Do not enable paging yet: the PC-specific BAR/shared-window and ROM/GPU-window replacements still need to be defined and tested.
 
 The generated page tables are currently inactive. The QEMU harness is expected to verify allocator success and table construction before this milestone is considered tested.
+
+
+### QEMU verification — allocator and Xbox page-table layout
+
+- [x] Physical allocator native tests pass, including 64-bit map-overflow rejection and contiguous aligned allocations.
+- [x] Freestanding 32-bit physical allocator compiles.
+- [x] QEMU boot confirms the physical allocator returns a page.
+- [x] QEMU boot confirms the 256 MiB identity and 0x80000000 alias page tables are built.
+- [x] Full PC harness QEMU serial test passes.
+
+Verified in [GitHub Actions run 45186680707](https://github.com/rianalwis0v0-a11y/X-box-og-kernel-that-runs-on-pc/actions/runs/45186680707), commit `712a3e527a1fa75dc567f49ad6cb03b52a1f76fa`.
+
+Paging is still deliberately disabled. This test proves the page-table structures were constructed in the PC harness; it does not prove the Xbox kernel can execute with them.
