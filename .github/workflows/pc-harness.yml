@@ -22,6 +22,8 @@ jobs:
           sparse-checkout-cone-mode: true
       - name: Test PE32 image inspector
         run: python3 -m unittest discover -s xbox_leak_may_2020/pc_port -p 'test_*.py' -v
+      - name: Test x86 page-table builder
+        run: gcc -std=c11 -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port xbox_leak_may_2020/pc_port/pc_paging.c xbox_leak_may_2020/pc_port/test_pc_paging.c -o /tmp/pc-paging-tests && /tmp/pc-paging-tests
       - name: Test PC HAL and NV2A bridge contracts
         run: >-
           gcc -std=c11 -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port
