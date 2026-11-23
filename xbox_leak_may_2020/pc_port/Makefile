@@ -15,7 +15,7 @@ check-tools:
 boot.o: boot.S | check-tools
 	$(AS) $(CFLAGS) -c $< -o $@
 
-kernel.o: kernel.c xbox_pc_boot.h pc_idt.h pc_gdt.h pc_irq.h pc_paging.h | check-tools
+kernel.o: kernel.c xbox_pc_boot.h pc_idt.h pc_gdt.h pc_irq.h pc_paging.h pc_physmem.h | check-tools
 	$(CC) $(CFLAGS) -c $< -o $@
 
 pc_paging.o: pc_paging.c pc_paging.h | check-tools
@@ -39,9 +39,12 @@ exception_stubs.o: exception_stubs.S | check-tools
 xbox_pc_boot.o: xbox_pc_boot.c xbox_pc_boot.h | check-tools
 	$(CC) $(CFLAGS) -c $< -o $@
 
-pc-harness.elf: boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o linker.ld
-	$(LD) $(LDFLAGS) -o $@ boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o
+pc_physmem.o: pc_physmem.c pc_physmem.h | check-tools
+	$(CC) $(CFLAGS) -c $< -o $@
+
+pc-harness.elf: boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o linker.ld
+	$(LD) $(LDFLAGS) -o $@ boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o
 	@file $@
 
 clean:
-	rm -f boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o pc-harness.elf
+	rm -f boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o pc-harness.elf
