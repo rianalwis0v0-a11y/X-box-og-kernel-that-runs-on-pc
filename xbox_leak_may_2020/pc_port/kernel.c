@@ -106,11 +106,17 @@ static void report_memory(const multiboot_info_min *info) {
         }
         return;
     }
-    while (offset + sizeof(uint32_t) <= info->mmap_length) {
+    while (offset <= info->mmap_length &&
+           info->mmap_length - offset >= sizeof(uint32_t)) {
         const multiboot_mmap_entry *entry =
             (const multiboot_mmap_entry *)(uintptr_t)(info->mmap_addr + offset);
-        uint32_t step = entry->size + sizeof(entry->size);
-        if (entry->size < 20u || step > info->mmap_length - offset) {
+        uint32_t step;
+        if (entry->size < 20u || entry->size > UINT32_MAX - sizeof(entry->size)) {
+            serial_write("PC-HAL: malformed memory map entry; stopping safely\n");
+            return;
+        }
+        step = entry->size + sizeof(entry->size);
+        if (step > info->mmap_length - offset) {
             serial_write("PC-HAL: malformed memory map entry; stopping safely\n");
             return;
         }
