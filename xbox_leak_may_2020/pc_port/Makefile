@@ -42,9 +42,12 @@ xbox_pc_boot.o: xbox_pc_boot.c xbox_pc_boot.h | check-tools
 pc_physmem.o: pc_physmem.c pc_physmem.h | check-tools
 	$(CC) $(CFLAGS) -c $< -o $@
 
-pc-harness.elf: boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o linker.ld
-	$(LD) $(LDFLAGS) -o $@ boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o
+pc_hal_native.o: pc_hal_native.c pc_hal_native.h | check-tools
+	$(CC) $(CFLAGS) -c $< -o $@
+
+pc-harness.elf: boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o linker.ld
+	$(LD) $(LDFLAGS) -o $@ boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o
 	@file $@
 
 clean:
-	rm -f boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o pc-harness.elf
+	rm -f boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o pc-harness.elf
