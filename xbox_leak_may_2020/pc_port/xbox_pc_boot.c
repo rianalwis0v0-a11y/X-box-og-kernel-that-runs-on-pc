@@ -103,6 +103,96 @@ int xbox_pc_validate_pe32_file(const uint8_t *f, uint32_t n,
     return 1;
 }
 
+
+/*
+ * Copy headers/sections to a caller-owned image buffer and apply PE32
+ * IMAGE_REL_BASED_HIGHLOW relocations. Unsupported relocation types fail
+ * closed. This is deliberately not an executable-memory allocator.
+ */
+int xbox_pc_load_pe32_image(const xbox_pc_kernel_image *image,
+                            uint8_t *destination, uint32_t destination_size,
+                            uint32_t load_base, uint32_t *entry_address) {
+    const uint8_t *f;
+    uint32_t pe, opt, sec, i, delta, reloc_rva, reloc_size, cursor;
+    uint16_t sections, opt_size;
+    if (!image || !image->file || !destination || !entry_address ||
+        destination_size < image->image_size ||
+        image->image_size > UINT32_MAX - load_base ||
+        image->entry_rva >= image->image_size)
+        return 0;
+    f = image->file;
+    if (image->file_size < 0x40u) return 0;
+    pe = rd32(f + 0x3cu);
+    if (!span_ok(pe, 24u, image->file_size)) return 0;
+    opt = pe + 24u;
+    opt_size = rd16(f + pe + 20u);
+    if (!span_ok(opt, opt_size, image->file_size) || opt_size < 96u)
+        return 0;
+    sections = rd16(f + pe + 6u);
+    sec = opt + opt_size;
+    if (!sections || sections != image->section_count ||
+        !span_ok(sec, (uint32_t)sections * 40u, image->file_size))
+        return 0;
+
+    for (i = 0; i < image->image_size; ++i) destination[i] = 0;
+    for (i = 0; i < image->headers_size; ++i) destination[i] = f[i];
+    for (i = 0; i < sections; ++i) {
+        const uint8_t *s = f + sec + i * 40u;
+        uint32_t va = rd32(s + 12u), raw_size = rd32(s + 16u);
+        uint32_t raw = rd32(s + 20u);
+        uint32_t vsize = rd32(s + 8u);
+        uint32_t extent = vsize > raw_size ? vsize : raw_size;
+        uint32_t j;
+        if ((raw_size && (!span_ok(raw, raw_size, image->file_size) ||
+                          !span_ok(va, raw_size, image->image_size))) ||
+            (extent && !span_ok(va, extent, image->image_size)))
+            return 0;
+        for (j = 0; j < raw_size; ++j)
+            destination[va + j] = f[raw + j];
+    }
+
+    delta = load_base - image->preferred_base;
+    if (delta) {
+        uint32_t directory_offset = 96u + 5u * 8u;
+        if (opt_size < directory_offset + 8u) return 0;
+        reloc_rva = rd32(f + opt + directory_offset);
+        reloc_size = rd32(f + opt + directory_offset + 4u);
+        if (!reloc_rva || !reloc_size ||
+            !span_ok(reloc_rva, reloc_size, image->image_size))
+            return 0;
+        cursor = 0;
+        while (cursor < reloc_size) {
+            uint32_t block_rva, block_size, count, j;
+            if (reloc_size - cursor < 8u) return 0;
+            block_rva = rd32(destination + reloc_rva + cursor);
+            block_size = rd32(destination + reloc_rva + cursor + 4u);
+            if (block_size < 8u || block_size > reloc_size - cursor ||
+                ((block_size - 8u) & 1u) != 0 ||
+                block_rva >= image->image_size)
+                return 0;
+            count = (block_size - 8u) / 2u;
+            for (j = 0; j < count; ++j) {
+                uint16_t item = rd16(destination + reloc_rva + cursor + 8u + j * 2u);
+                uint16_t type = item >> 12;
+                uint32_t target = block_rva + (item & 0x0fffu);
+                uint32_t value;
+                if (type == 0u) continue; /* IMAGE_REL_BASED_ABSOLUTE */
+                if (type != 3u || !span_ok(target, 4u, image->image_size))
+                    return 0; /* Only IMAGE_REL_BASED_HIGHLOW is supported. */
+                value = rd32(destination + target);
+                value += delta;
+                destination[target] = (uint8_t)value;
+                destination[target + 1u] = (uint8_t)(value >> 8);
+                destination[target + 2u] = (uint8_t)(value >> 16);
+                destination[target + 3u] = (uint8_t)(value >> 24);
+            }
+            cursor += block_size;
+        }
+    }
+    *entry_address = load_base + image->entry_rva;
+    return 1;
+}
+
 int xbox_pc_find_kernel_module(uint32_t magic, uint32_t info_address,
                                xbox_pc_kernel_image *out) {
     const mb_info_min *info;
