@@ -106,3 +106,8 @@ The page-table builder rejects overlapping physical or virtual backing storage. 
 The kernel now passes the six type-0 or two type-1 BAR register values through `PcPciDecodeBars`. It reports decoded I/O or memory BAR base addresses, 32/64-bit width, original BAR slot, and prefetchability. A 64-bit BAR consumes its following register. Unknown header layouts and malformed BAR encodings are not guessed.
 
 This is discovery only: the harness does not size BARs by writing all-ones, change PCI command bits, claim resources, map device MMIO, enable bus mastering, or route device interrupts. The next HAL stage is to reserve these decoded ranges against RAM, build cache-correct MMIO mappings, and only then initialize individual devices.
+
+
+## MMIO page attributes
+
+The 32-bit page-table builder now preserves the x86 PWT and PCD leaf-entry flags in addition to write and user permissions. This provides the page-table primitive needed to map device MMIO with cache-control attributes; a native unit test maps a representative APIC page with both flags and verifies the translated physical address and flags. It does not yet establish a complete PAT/MTRR memory-type policy, map firmware-discovered BARs, or enable paging.
