@@ -22,7 +22,7 @@ Implement a small, independent x86 boot harness. It must not overwrite or patch 
 
 - [x] Select a first test path: Multiboot v1 via GRUB/QEMU, 32-bit protected mode. This validates the PC harness only; it is not the original Xbox firmware path.
 - [x] Confirm the Xbox HAL source is x86-specific; the isolated harness enters 32-bit protected mode.
-- [x] Install an IDT with fail-stop handlers for CPU exception vectors 0-31 in the independent PC harness.\n- [ ] Establish and validate a complete GDT/stack contract and diagnostic exception reporting.
+- [x] Install an IDT with fail-stop handlers for CPU exception vectors 0-31 in the independent PC harness.\n- [x] Install a flat 32-bit GDT and reload CS/data segments in the independent PC harness.\n- [x] Report fatal exception vector, error code, and EIP over serial.\n- [ ] Add controlled IRQ stubs, PIC/APIC routing, and timer self-test.
 - [ ] Capture CPU vendor/features and physical memory map.
 - [ ] Provide serial-console diagnostics and a deterministic halt on fatal errors.
 - [ ] Validate the harness with a minimal standalone test image before loading kernel code.
@@ -77,7 +77,7 @@ Source analysis has confirmed these concrete facts:
 - The boot tree contains bootx/preldr32 and bootx/bldr32. preldr32.c verifies ROM contents/signature, decrypts the bootloader, and derives its entry address from ROM-specific data. That flow cannot be used unchanged on a PC with no Xbox ROM/MCPX.
 - CPXXUPD/private/ntos/init/sources.inc is only an update component manifest and links against prebuilt Xbox libraries; it is not a complete independent kernel build.
 
-The independent PC harness, Makefile, linker script, serial diagnostics, and QEMU CI workflow have been committed under pc_port/. GitHub Actions run #1 is building the harness. Its result must be checked before marking the harness milestone complete.
+The independent PC harness, Makefile, linker script, serial diagnostics, GDT, exception IDT, and QEMU CI workflow are committed under pc_port/. The current commit must pass GitHub Actions before the GDT/IDT milestone is considered tested.
 
 Next engineering task: inspect bootx/bldr32 startup/loader contract and the halx/i386 initialization dependencies, then define the smallest PC loader-to-kernel handoff. Do not call the original Xbox preloader on a PC: its ROM signature/decryption and fixed-address assumptions are platform-specific.
 
