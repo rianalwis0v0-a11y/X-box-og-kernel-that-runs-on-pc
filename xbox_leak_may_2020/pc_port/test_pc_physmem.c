@@ -62,6 +62,14 @@ int main(void) {
     assert(!pc_physmem_alloc_pages(&memory,1u,3u));
     assert(!pc_physmem_alloc_pages(&memory,0u,1u));
 
+    memory.search_hint = PC_PHYSMEM_PAGE_COUNT + 1u;
+    assert(!pc_physmem_alloc_pages(&memory,1u,1u));
+    assert(!pc_physmem_reserve(&memory,0x00100000u,0x1000u));
+    memory.search_hint = 0u;
+    memory.free_pages = PC_PHYSMEM_PAGE_COUNT + 1u;
+    assert(pc_physmem_alloc_page(&memory) == 0u);
+    assert(!pc_physmem_alloc_pages(&memory,1u,1u));
+
     puts("PC-PHYSMEM: reserved-range page allocator tests PASS");
     return 0;
 }
