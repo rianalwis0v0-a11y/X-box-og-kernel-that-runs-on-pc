@@ -22,7 +22,7 @@ Implement a small, independent x86 boot harness. It must not overwrite or patch 
 
 - [x] Select a first test path: Multiboot v1 via GRUB/QEMU, 32-bit protected mode. This validates the PC harness only; it is not the original Xbox firmware path.
 - [x] Confirm the Xbox HAL source is x86-specific; the isolated harness enters 32-bit protected mode.
-- [ ] Establish a known-good stack, GDT, IDT, and exception handlers.
+- [x] Install an IDT with fail-stop handlers for CPU exception vectors 0-31 in the independent PC harness.\n- [ ] Establish and validate a complete GDT/stack contract and diagnostic exception reporting.
 - [ ] Capture CPU vendor/features and physical memory map.
 - [ ] Provide serial-console diagnostics and a deterministic halt on fatal errors.
 - [ ] Validate the harness with a minimal standalone test image before loading kernel code.
