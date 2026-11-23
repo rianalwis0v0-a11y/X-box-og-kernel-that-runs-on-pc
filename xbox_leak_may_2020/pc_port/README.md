@@ -1,44 +1,30 @@
-# PC boot harness (isolated from Xbox kernel)
+# Native PC bare-metal bring-up harness
 
-This directory is the first executable milestone for the native-PC port. It is intentionally independent of the leaked kernel: it proves the PC firmware/bootloader-to-32-bit-kernel path before any Xbox binary is loaded.
+This is a real ring-0 x86 test kernel, booted directly by a Multiboot v1 bootloader. It does not run as a Windows/Linux process and does not require VT-x, AMD-V, or VMCALL. GRUB is only the bootloader; after handoff, the harness executes privileged CPU and PCI I/O instructions directly.
 
-## Target
+## Current executable milestone
 
-- x86 32-bit protected mode
-- GRUB 2 Multiboot v1 loader
-- serial diagnostics on COM1 (0x3F8)
-- QEMU/Bochs-compatible first test target
+- 32-bit protected-mode entry with a private stack.
+- COM1 serial diagnostics.
+- CPUID vendor identification.
+- Multiboot v1 physical memory-map parsing with entry-length bounds checks.
+- PCI configuration mechanism #1 enumeration through ports 0xCF8/0xCFC.
+- NVIDIA NV2A PCI ID detection (10DE:02A0), if present.
+- Deterministic halt after hardware probes.
 
-## Build
+## Build and test
 
-Requires NASM, an i686-elf GCC/binutils toolchain, and GRUB tooling. Run `make` here. The output is a standalone harness ELF, not an Xbox kernel image.
-
-## Test
-
-Boot the ELF with a Multiboot-capable GRUB image in QEMU. Expected serial output:
-
-```
-PC-HARNESS: entered 32-bit kernel
-PC-HARNESS: serial PASS
-PC-HARNESS: halting (Xbox kernel not loaded)
-```
-
-The harness must not claim Xbox hardware is initialized. No NV2A, MCPX, SMBus, or Xbox interrupt-controller emulation is provided here.
-
-## Next integration gate
-
-Do not add a kernel loader until Stage 0 in ../PC_PORTING.md identifies the source image format, entry point, ABI, relocation model, and required CPU features from the actual source/build artifacts.
-
-
-## PE32 kernel-image inspection (validation only)
-
-The first kernel-integration tool is `pe32_inspect.py`. It accepts an i386 PE32 image and prints a JSON report containing the preferred image base, entry RVA/VA, section map, imports directory and relocation directory.
+Requires a 32-bit-capable GCC/binutils toolchain and QEMU:
 
 ```sh
-python3 pe32_inspect.py /path/to/kernel-image.exe
-python3 -m unittest discover -s . -p 'test_*.py' -v
+make CROSS=
+qemu-system-i386 -kernel pc-harness.elf -display none -serial stdio -monitor none
 ```
 
-The inspector rejects malformed/truncated headers, non-i386 or non-PE32 images, invalid section ranges, overlapping virtual sections, and entry points outside executable sections. It never loads or executes the image. The GitHub Actions workflow runs its unit tests before building and boot-testing the separate Multiboot harness.
+The GitHub Actions workflow builds the ELF, checks its Multiboot header, boots it in QEMU, and verifies the serial diagnostics.
 
-Do not supply proprietary Xbox keys or try to run an image based only on a successful inspection report. Loading and execution require a separately reviewed relocation, memory-map, load-options and kernel-entry contract.
+## Critical limitation
+
+This proves only the standalone native PC harness and its early hardware probes. It does **not** load or boot the original Xbox kernel. The Xbox kernel still needs a verified PE32 loader/relocation/import path, its exact boot handoff, native replacement implementations for Xbox-specific HAL services, and integration of the NV2A translation layer. The existing `PC_COMPAT_GUEST` VMCALL adapter is a separate hypervisor-guest experiment; it is not used by this bare-metal harness.
+
+Do not flash this test ELF to a physical disk or firmware. Test it in QEMU first; use removable media only after the boot image and hardware paths are validated.
