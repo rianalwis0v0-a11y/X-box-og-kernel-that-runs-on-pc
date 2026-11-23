@@ -281,3 +281,17 @@ The generated page tables are currently inactive. The QEMU harness is expected t
 Verified in [GitHub Actions run 45186680707](https://github.com/rianalwis0v0-a11y/X-box-og-kernel-that-runs-on-pc/actions/runs/45186680707), commit `712a3e527a1fa75dc567f49ad6cb03b52a1f76fa`.
 
 Paging is still deliberately disabled. This test proves the page-table structures were constructed in the PC harness; it does not prove the Xbox kernel can execute with them.
+
+
+### Current QEMU-verified memory layout (2026-11-23)
+
+- [x] The boot harness initializes the Multiboot-backed physical allocator and reserves the kernel image, boot metadata, modules, low memory, and selected MMIO windows.
+- [x] GitHub Actions run [45186442838](https://github.com/rianalwis0v0-a11y/X-box-og-kernel-that-runs-on-pc/actions/runs/45186442838) passed the integrated QEMU allocator self-test; it allocated physical page 0x0012D000.
+- [x] Allocate 129 contiguous pages for one page directory plus 128 page tables.
+- [x] Build the source-derived first-256-MiB identity mapping and 0x80000000 system alias, with paging deliberately left disabled.
+- [x] GitHub Actions run [45186609936](https://github.com/rianalwis0v0-a11y/X-box-og-kernel-that-runs-on-pc/actions/runs/45186609936) passed the QEMU page-table construction and boot checks.
+- [x] Reject page-table backing storage whose kernel virtual ranges overlap, in addition to physical overlap.
+- [ ] Verify all Xbox-required aliases and reservations from the complete boot/memory-manager source before activating paging.
+- [ ] Add PCI BAR and firmware/MMIO discovery, page permissions/cache attributes, then enable paging only after every executing region is mapped.
+
+The QEMU test confirms the allocator and page-table data structures can be built. It does not load the Xbox kernel, activate CR0.PG/CR3, or prove the entire original Xbox address space is supported.
