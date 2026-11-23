@@ -83,3 +83,10 @@ The harness now initializes a 4 GiB-bounded physical-page bitmap from the Multib
 
 
 The current GitHub Actions run [45186680707](https://github.com/rianalwis0v0-a11y/X-box-og-kernel-that-runs-on-pc/actions/runs/45186680707) passed end-to-end: native allocator tests, freestanding allocator compilation, page-table builder tests, 32-bit harness build, Multiboot validation, and QEMU serial checks for physical allocation and the Xbox 256 MiB identity/high-alias table layout. Paging remains off and the Xbox kernel is not executed.
+
+
+## QEMU-tested Xbox memory-layout preparation
+
+The boot harness now allocates a contiguous 129-page block for a page directory and 128 page tables. It builds a 256 MiB identity map and a matching alias at 0x80000000 based on the inspected bldr32 startup layout, then verifies representative identity and alias translations. The tables remain inactive: CR0.PG is not set and CR3 is not loaded. QEMU CI has passed the allocator and page-table build milestone.
+
+The page-table builder rejects overlapping physical or virtual backing storage. The next work is to validate the full Xbox virtual-memory contract, add PCI/firmware MMIO mappings and page attributes, and only then consider enabling paging.
