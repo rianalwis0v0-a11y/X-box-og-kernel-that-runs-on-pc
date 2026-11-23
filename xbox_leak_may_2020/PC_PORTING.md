@@ -227,3 +227,17 @@ The PE32 validator now rejects import, TLS, and delay-import directories because
 - [ ] The page-table builder is not yet activated by the harness; no Xbox memory aliases or physical allocator are in place.
 
 Verified in [GitHub Actions run 45185239535](https://github.com/rianalwis0v0-a11y/X-box-og-kernel-that-runs-on-pc/actions/runs/45185239535).
+
+
+### PE32 structural validation and physical allocator (2026-11-23)
+
+- [x] Validate PE32 file/section alignment values and image/header alignment.
+- [x] Reject virtual-section overlap and raw-file-section overlap.
+- [x] Add a bitmap physical-page allocator for the 32-bit addressable range (4 GiB).
+- [x] Populate allocatable pages only from complete 4 KiB pages inside Multiboot type-1 RAM entries.
+- [x] Make overlapping non-usable memory-map entries take precedence.
+- [x] Reserve arbitrary physical ranges, including unaligned ranges, and keep physical page zero unavailable.
+- [x] Reject truncated/overflowing memory-map records and fail closed.
+- [x] Add native tests and freestanding 32-bit compile checks to GitHub Actions.
+
+The allocator uses caller-owned bitmap storage (128 KiB for the 4 GiB/4 KiB page domain). It does not yet reserve the actual running harness, Multiboot structures, kernel module, page-table storage, firmware regions, or MMIO ranges automatically. The boot path must supply those reservations before allocating pages. It is not yet connected to pc_paging and paging remains disabled.
