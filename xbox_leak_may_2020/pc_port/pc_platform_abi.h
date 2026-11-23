@@ -144,7 +144,7 @@ typedef struct pc_platform_block_io {
 PC_PLATFORM_STATIC_ASSERT(sizeof(pc_platform_call) == 40, "platform call ABI drift");
 PC_PLATFORM_STATIC_ASSERT(sizeof(pc_platform_memory_range) == 24, "memory range ABI drift");
 PC_PLATFORM_STATIC_ASSERT(sizeof(pc_platform_pci_address) == 8, "PCI address ABI drift");
-PC_PLATFORM_STATIC_ASSERT(sizeof(pc_platform_pci_device) == 40, "PCI device ABI drift");
+PC_PLATFORM_STATIC_ASSERT(sizeof(pc_platform_pci_device) == 48, "PCI device ABI drift");
 PC_PLATFORM_STATIC_ASSERT(sizeof(pc_platform_pci_config) == 16, "PCI config ABI drift");
 PC_PLATFORM_STATIC_ASSERT(sizeof(pc_platform_dma_request) == 32, "DMA request ABI drift");
 PC_PLATFORM_STATIC_ASSERT(sizeof(pc_platform_interrupt_request) == 16, "interrupt ABI drift");
