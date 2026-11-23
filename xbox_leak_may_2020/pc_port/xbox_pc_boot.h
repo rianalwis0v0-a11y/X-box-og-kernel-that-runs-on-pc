@@ -19,6 +19,10 @@ typedef struct xbox_pc_kernel_image {
     uint16_t section_count;
 } xbox_pc_kernel_image;
 
+/* Validate one PE32/i386 file image without loading or executing it. */
+int xbox_pc_validate_pe32_file(const uint8_t *file, uint32_t file_size,
+                               xbox_pc_kernel_image *out);
+
 /*
  * Locate and validate an xboxkrnl.exe Multiboot module.
  * This deliberately does not execute it or invent XboxCryptKeys.
