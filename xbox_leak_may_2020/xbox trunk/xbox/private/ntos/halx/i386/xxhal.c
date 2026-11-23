@@ -140,6 +140,16 @@ Return Value:
 
 --*/
 {
+#ifdef PC_COMPAT_GUEST
+    /* No Xbox LPC hardware-monitor pin exists on a standard PC. */
+#else
+
+#ifdef PC_COMPAT_GUEST
+    if (!PcHalInitializePlatform()) {
+        KeBugCheck(0x50434841);
+    }
+#else
+
     //
     // Initialize the 8259 programmable interrupt controller.  Note that
     // this will enable interrupts.
@@ -147,6 +157,8 @@ Return Value:
 
     HalPulseHardwareMonitorPin();
     HalpInitializePICs();
+#endif
+#endif
 }
 
 VOID
@@ -170,6 +182,14 @@ Return Value:
 
 --*/
 {
+#ifdef PC_COMPAT_GUEST
+    KiSetHandlerAddressToIDT(CLOCK_VECTOR, KeClockInterrupt);
+    if (!PcHalRegisterInterrupt(CLOCK_VECTOR, 0)) {
+        KeBugCheck(0x50434952); /* PC interrupt registration failed */
+    }
+    /* Xbox-only SMC/SMBus/SCI interrupts are intentionally not registered. */
+#else
+
     //
     // Connect to the system interrupts.
     //
@@ -203,6 +223,7 @@ Return Value:
     HalPulseHardwareMonitorPin();
     KiSetHandlerAddressToIDT(SCI_VECTOR, HalpSystemControlInterrupt);
     HalEnableSystemInterrupt(SCI_VECTOR - PRIMARY_VECTOR_BASE, LevelSensitive);
+#endif
 }
 
 VOID
