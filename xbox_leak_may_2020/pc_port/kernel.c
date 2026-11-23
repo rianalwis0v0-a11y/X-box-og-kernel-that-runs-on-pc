@@ -191,7 +191,10 @@ static int initialize_physical_allocator(const multiboot_info_min *info,
         for (i = 0; i < info->mods_count; ++i) {
             if (modules[i].end <= modules[i].start ||
                 !pc_physmem_reserve(&physical_memory, modules[i].start,
-                                    modules[i].end - modules[i].start))
+                                    modules[i].end - modules[i].start) ||
+                (modules[i].string &&
+                 !pc_physmem_reserve(&physical_memory, modules[i].string,
+                                     64u)))
                 return 0;
             if (modules[i].string &&
                 !pc_physmem_reserve(&physical_memory, modules[i].string, 64u))
