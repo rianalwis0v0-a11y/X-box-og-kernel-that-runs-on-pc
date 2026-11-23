@@ -23,7 +23,7 @@ jobs:
       - name: Install toolchain and emulator
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-multilib grub-pc-bin qemu-system-x86
+          sudo apt-get install -y gcc-multilib grub-common grub-pc-bin qemu-system-x86
       - name: Build standalone 32-bit harness
         working-directory: xbox_leak_may_2020/pc_port
         run: make CROSS=
