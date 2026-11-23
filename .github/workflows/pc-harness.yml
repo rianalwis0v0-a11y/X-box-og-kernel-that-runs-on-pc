@@ -35,6 +35,8 @@ jobs:
         run: gcc -std=c11 -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port xbox_leak_may_2020/pc_port/nv2a_transport.c xbox_leak_may_2020/pc_port/nv2a_dispatch.c xbox_leak_may_2020/pc_port/test_nv2a_dispatch.c -o /tmp/nv2a-dispatch-tests && /tmp/nv2a-dispatch-tests
       - name: Validate existing NV2A bridge ABI layout
         run: gcc -std=c11 -Wall -Wextra -Werror -fsyntax-only xbox_leak_may_2020/pc_port/test_nv2a_abi.c
+      - name: Compile PC guest HAL VMCALL adapter
+        run: gcc -m32 -std=c11 -Wall -Wextra -Werror -DPC_COMPAT_GUEST -Ixbox_leak_may_2020/pc_port -fsyntax-only xbox_leak_may_2020/pc_port/pc_hal_guest.c
       - name: Validate PC platform hypercall ABI
         run: gcc -std=c11 -Wall -Wextra -Werror -fsyntax-only xbox_leak_may_2020/pc_port/test_platform_abi.c
       - name: Install toolchain and emulator
