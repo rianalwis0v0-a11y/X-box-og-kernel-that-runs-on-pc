@@ -147,3 +147,15 @@ This is a real source-level HAL split, but it is not yet a complete working PC H
 - [x] Update QEMU CI to require these serial diagnostics.
 
 This is the first native hardware-access milestone: the harness executes directly in 32-bit protected mode and performs CPU/PCI I/O without a hypervisor. It still halts before loading the Xbox kernel. The PC harness now installs a flat GDT and exception/legacy IRQ IDT gates and tests PIT IRQ0 through the 8259 PIC. It does not yet build Xbox-required page tables or implement the Xbox kernel's PE loader/entry ABI. The VMCALL-based `PC_COMPAT_GUEST` path is not used by this bare-metal harness and must not be confused with it.
+
+
+### Kernel module validation hardening (2026-11-23)
+
+- [x] Bound the Multiboot module-name scan to 64 bytes.
+- [x] Reject module descriptor-table address overflow before indexing it.
+- [x] Require the PE section table to fit inside SizeOfHeaders.
+- [x] Reject section raw data that overlaps PE headers or exceeds the supplied module.
+- [x] Require the PE entry RVA to be nonzero, inside SizeOfImage, and covered by an executable section.
+- [ ] Await GitHub Actions run 101 for commit `efffdc7e6dedb8211e927f654da71f159dd13627`; it was still in progress at the time of this update.
+
+These checks harden validation only. The module is still not mapped into a new image layout, relocations/imports are not processed, page tables are not built, and the Xbox kernel entry is not called.
