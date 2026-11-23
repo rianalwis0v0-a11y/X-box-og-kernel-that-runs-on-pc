@@ -94,3 +94,15 @@ See [PC_BOOT_CONTRACT.md](PC_BOOT_CONTRACT.md) for source-level evidence and the
 Verified from `bldr32.c`: the kernel is called as a cdecl function taking two arguments, `LoadOptions` and `CryptKeys`. The entry address is calculated from the PE NT header's `AddressOfEntryPoint` plus `PsNtosImageBase`. The Xbox startup assembly establishes paging and Xbox-specific physical mappings before that call. A Multiboot entry is therefore not a substitute for the Xbox bootloader contract.
 
 Next implementation: add a bounded PE32 inspection utility and tests. It must validate the actual kernel image format and section/relocation metadata without executing the image. Kernel execution remains gated on a complete memory/CPU/HAL handoff contract.
+
+
+### Stage 2 progress
+
+- [x] Add a standalone, bounds-checked PE32/i386 inspection utility at `pc_port/pe32_inspect.py`.
+- [x] Add synthetic valid/malformed PE32 unit tests at `pc_port/test_pe32_inspect.py`.
+- [x] Run the inspector tests in GitHub Actions before the QEMU harness job.
+- [ ] Run the inspector against a legally available, matching Xbox kernel image and archive its report/hash.
+- [ ] Determine the actual relocation/import requirements and memory layout from that image.
+- [ ] Implement a loader only after the above contract is verified.
+
+The synthetic tests validate parser behavior; they are not evidence that the Xbox kernel itself has been parsed or booted.
