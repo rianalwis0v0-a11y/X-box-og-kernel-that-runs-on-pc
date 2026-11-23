@@ -193,8 +193,10 @@ The QEMU pass is for the independent PC harness only. It does not load or execut
 - [x] Support virtual-to-physical ranges and supervisor/user plus read-write PTE flags.
 - [x] Reject address overflow, misalignment, conflicting aliases, and table exhaustion.
 - [x] Preflight mapping requests so rejected ranges do not partially modify page tables.
-- [ ] Add a physical page allocator that reserves the kernel, Multiboot structures, modules, and firmware/MMIO ranges.
-- [ ] Confirm the Xbox kernel's required virtual aliases and low-memory layout from its source before activating paging.
+- [x] Add a Multiboot memory-map physical page allocator; reserve low memory, the running kernel, Multiboot info/map, command line, modules, and conventional MMIO windows.
+- [x] Add contiguous aligned physical-page allocation for page-directory/page-table backing.
+- [x] Build the source-verified 256 MiB identity map plus the 0x80000000 alias using 4 KiB page tables.
+- [ ] Add the remaining PC MMIO/shared-window mappings and validate all required Xbox aliases before activating paging.
 - [ ] Enable paging only after all executing code, stack, page tables, and boot data are mapped.
 - [ ] Build the Xbox memory map and invoke the source-verified two-argument cdecl entry only after valid load-options and crypt-key buffers are available.
 
@@ -253,3 +255,16 @@ The allocator uses caller-owned bitmap storage (128 KiB for the 4 GiB/4 KiB page
 - [ ] Confirm the integrated QEMU boot test passes on the latest commit.
 
 The allocator is now exercised by the real bare-metal harness, not only its native unit test. It still does not feed page-table construction or enable CR0.PG/CR3; the allocated page is a diagnostic self-test. PCI BAR MMIO ranges and the exact Xbox kernel virtual layout still require discovery/reservation before paging is activated.
+
+
+### Stage 2 — Multiboot physical allocator and Xbox mapping layout
+
+- [x] Add a 1-bit-per-page physical allocator below 4 GiB; only whole pages inside Multiboot type-1 RAM are candidates.
+- [x] Make overlapping non-type-1 firmware ranges win over usable ranges.
+- [x] Reserve page zero, the first MiB, kernel image/BSS, Multiboot info and memory map, command line, module descriptors/data/names, and legacy/APIC MMIO windows.
+- [x] Add aligned contiguous page allocation; CI tests fragmentation, alignment, overflow, malformed maps, and reservation behavior.
+- [x] Allocate 129 contiguous pages and build 128 page tables plus one page directory.
+- [x] Build the 256 MiB identity map and 0x80000000 high alias found in the original bldr32 startup source.
+- [ ] Do not enable paging yet: the PC-specific BAR/shared-window and ROM/GPU-window replacements still need to be defined and tested.
+
+The generated page tables are currently inactive. The QEMU harness is expected to verify allocator success and table construction before this milestone is considered tested.
