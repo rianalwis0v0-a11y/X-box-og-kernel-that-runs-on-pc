@@ -106,3 +106,18 @@ Next implementation: add a bounded PE32 inspection utility and tests. It must va
 - [ ] Implement a loader only after the above contract is verified.
 
 The synthetic tests validate parser behavior; they are not evidence that the Xbox kernel itself has been parsed or booted.
+
+
+### Stage 3 progress — PC HAL and NV2A host boundary
+
+- [x] Define a versioned host-PC HAL contract for MMIO mapping, PCI configuration, interrupt routing and monotonic timers in `pc_port/include/pc_hal.h`.
+- [x] Define a renderer callback contract for surfaces, shader translation, indexed draws and presentation in `pc_port/include/nv2a_pc_bridge.h`.
+- [x] Preserve the existing fixed-width guest/host shared-memory ABI in `pc_port/nv2a_bridge.h`; it is the transport protocol, not the renderer itself.
+- [x] Add bounds/sequence validation for the shared-memory header, commands and pushbuffer ranges in `pc_port/nv2a_transport.c`.
+- [x] Add compile/run tests for the ABI validators and register them in the PC harness workflow.
+- [ ] Implement the command-ring consumer and actual NV2A pushbuffer/method decoder.
+- [ ] Connect the decoder to the existing NV2A register/state model and shader translator.
+- [ ] Implement a real host renderer backend (D3D or Vulkan) and verify clear → triangle → present.
+- [ ] Replace the original Xbox HAL's MCPX/SMC/SMBus/southbridge assumptions with PC implementations, subsystem by subsystem.
+
+Important distinction: these commits define and test the PC-facing contracts and reject malformed shared-memory submissions. They do not yet translate NV2A methods into GPU commands, provide a working D3D/Vulkan renderer, or boot the Xbox kernel. The Xbox kernel's existing hardware initialization must not be called against generic PC hardware.
