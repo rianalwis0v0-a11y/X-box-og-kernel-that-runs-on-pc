@@ -3,6 +3,7 @@
 #include "pc_idt.h"
 #include "pc_gdt.h"
 #include "pc_irq.h"
+#include "pc_physmem.h"
 
 #define COM1 0x3F8u
 #define MULTIBOOT_BOOTLOADER_MAGIC 0x2BADB002u
@@ -10,6 +11,7 @@
 #define MULTIBOOT_INFO_MMAP    (1u << 6)
 #define PCI_CONFIG_ADDRESS 0xCF8u
 #define PCI_CONFIG_DATA    0xCFCu
+#define MULTIBOOT_INFO_MODS (1u << 3)
 
 typedef struct multiboot_info_min {
     uint32_t flags;
@@ -30,6 +32,16 @@ typedef struct multiboot_mmap_entry {
     uint64_t len;
     uint32_t type;
 } __attribute__((packed)) multiboot_mmap_entry;
+
+typedef struct multiboot_module {
+    uint32_t start, end, string, reserved;
+} multiboot_module;
+
+static uint8_t physical_bitmap[PC_PHYSMEM_BITMAP_BYTES]
+    __attribute__((aligned(4096)));
+static pc_physmem physical_memory;
+extern uint8_t __kernel_start;
+extern uint8_t __kernel_end;
 
 static inline void outb(uint16_t port, uint8_t value) {
     __asm__ volatile ("outb %0, %1" : : "a"(value), "Nd"(port));
@@ -132,6 +144,60 @@ static void report_memory(const multiboot_info_min *info) {
     serial_hex((uint32_t)usable);
     serial_write("\nPC-HAL: Multiboot memory map parsed\n");
 }
+static int initialize_physical_allocator(const multiboot_info_min *info,
+                                          uint32_t info_address) {
+    uint32_t i, module_bytes = 0;
+    uint32_t kernel_start = (uint32_t)(uintptr_t)&__kernel_start;
+    uint32_t kernel_end = (uint32_t)(uintptr_t)&__kernel_end;
+    if (!(info->flags & MULTIBOOT_INFO_MMAP) || !info->mmap_addr ||
+        !info->mmap_length ||
+        info->mmap_addr > UINT32_MAX - info->mmap_length ||
+        kernel_end <= kernel_start)
+        return 0;
+    if (!pc_physmem_init(&physical_memory, physical_bitmap,
+                         sizeof(physical_bitmap),
+                         (const void *)(uintptr_t)info->mmap_addr,
+                         info->mmap_length))
+        return 0;
+
+    /* Keep legacy low memory, the complete running image, and boot metadata. */
+    if (!pc_physmem_reserve(&physical_memory, 0, 0x100000u) ||
+        !pc_physmem_reserve(&physical_memory, kernel_start,
+                            kernel_end - kernel_start) ||
+        !pc_physmem_reserve(&physical_memory, info_address,
+                            sizeof(*info)) ||
+        !pc_physmem_reserve(&physical_memory, info->mmap_addr,
+                            info->mmap_length))
+        return 0;
+
+    if (info->flags & MULTIBOOT_INFO_MODS) {
+        const multiboot_module *modules;
+        if (!info->mods_count || info->mods_count > 128u ||
+            !info->mods_addr ||
+            info->mods_count > UINT32_MAX / sizeof(multiboot_module))
+            return 0;
+        module_bytes = info->mods_count * (uint32_t)sizeof(multiboot_module);
+        if (info->mods_addr > UINT32_MAX - module_bytes ||
+            !pc_physmem_reserve(&physical_memory, info->mods_addr,
+                                module_bytes))
+            return 0;
+        modules = (const multiboot_module *)(uintptr_t)info->mods_addr;
+        for (i = 0; i < info->mods_count; ++i) {
+            if (modules[i].end <= modules[i].start ||
+                !pc_physmem_reserve(&physical_memory, modules[i].start,
+                                    modules[i].end - modules[i].start))
+                return 0;
+        }
+    }
+
+    /* Reserve conventional MMIO windows even if firmware mislabels them RAM. */
+    if (!pc_physmem_reserve(&physical_memory, 0xA0000u, 0x60000u) ||
+        !pc_physmem_reserve(&physical_memory, 0xFEC00000u, 0x1000u) ||
+        !pc_physmem_reserve(&physical_memory, 0xFEE00000u, 0x1000u))
+        return 0;
+    return 1;
+}
+
 static void report_pci(void) {
     uint32_t found = 0;
     uint32_t nv2a = 0;
@@ -176,6 +242,18 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
     serial_write("PC-HAL: executing ring-0 native x86 hardware probes\n");
     report_cpu();
     report_memory(info);
+    if (initialize_physical_allocator(info, multiboot_info_address)) {
+        uint32_t page = pc_physmem_alloc_page(&physical_memory);
+        if (page) {
+            serial_write("PC-HAL: physical allocator PASS page=");
+            serial_hex(page);
+            serial_write("\n");
+        } else {
+            serial_write("PC-HAL: physical allocator ERROR no free page\n");
+        }
+    } else {
+        serial_write("PC-HAL: physical allocator ERROR invalid map/reservations\n");
+    }
     report_pci();
     serial_write("PC-HAL: starting PIT IRQ0 timer self-test\n");
     PcIrqInstallPit(100u);
