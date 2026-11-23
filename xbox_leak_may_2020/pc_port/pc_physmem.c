@@ -9,6 +9,12 @@ static uint32_t read32(const uint8_t *p) {
 static uint64_t read64(const uint8_t *p) {
     return (uint64_t)read32(p) | ((uint64_t)read32(p + 4) << 32);
 }
+static int context_valid(const pc_physmem *m) {
+    return m && m->bitmap &&
+           m->bitmap_bytes >= PC_PHYSMEM_BITMAP_BYTES &&
+           m->free_pages <= PC_PHYSMEM_PAGE_COUNT &&
+           m->search_hint <= PC_PHYSMEM_PAGE_COUNT;
+}
 static int bit_get(const pc_physmem *m, uint32_t page) {
     return (m->bitmap[page >> 3] >> (page & 7u)) & 1u;
 }
@@ -106,8 +112,7 @@ int pc_physmem_init(pc_physmem *m, uint8_t *bitmap,
 
 int pc_physmem_reserve(pc_physmem *m, uint64_t base, uint64_t length) {
     uint64_t end, last;
-    if (!m || !m->bitmap || m->bitmap_bytes < PC_PHYSMEM_BITMAP_BYTES ||
-        !length || base > UINT64_MAX - length)
+    if (!context_valid(m) || !length || base > UINT64_MAX - length)
         return 0;
     end = base + length;
     if (base >= PHYS_LIMIT) return 1;
@@ -123,8 +128,7 @@ int pc_physmem_reserve(pc_physmem *m, uint64_t base, uint64_t length) {
 
 uint32_t pc_physmem_alloc_page(pc_physmem *m) {
     uint32_t i, start;
-    if (!m || !m->bitmap || !m->free_pages ||
-        m->bitmap_bytes < PC_PHYSMEM_BITMAP_BYTES)
+    if (!context_valid(m) || !m->free_pages)
         return 0;
     start = m->search_hint < PC_PHYSMEM_PAGE_COUNT ? m->search_hint : 0;
     for (i = start; i < PC_PHYSMEM_PAGE_COUNT; ++i) {
@@ -148,10 +152,9 @@ uint32_t pc_physmem_alloc_page(pc_physmem *m) {
 uint32_t pc_physmem_alloc_pages(pc_physmem *m, uint32_t page_count,
                                 uint32_t alignment_pages) {
     uint32_t pass, pass_start;
-    if (!m || !m->bitmap || !page_count || !alignment_pages ||
+    if (!context_valid(m) || !page_count || !alignment_pages ||
         (alignment_pages & (alignment_pages - 1u)) ||
         page_count > m->free_pages ||
-        m->bitmap_bytes < PC_PHYSMEM_BITMAP_BYTES ||
         page_count > PC_PHYSMEM_PAGE_COUNT)
         return 0;
 
