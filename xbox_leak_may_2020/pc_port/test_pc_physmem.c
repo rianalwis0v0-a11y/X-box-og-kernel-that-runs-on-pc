@@ -49,6 +49,19 @@ int main(void) {
     assert(memory.free_pages == 2u);
     assert(pc_physmem_alloc_page(&memory) == 0x1000u);
 
+    /* Contiguous allocation honors page-count and power-of-two alignment. */
+    memset(mmap_bytes,0,sizeof(mmap_bytes));
+    entry(0,0x00100000u,0x00020000u,1u); /* 32 usable pages */
+    assert(pc_physmem_init(&memory,bitmap,sizeof(bitmap),mmap_bytes,24u));
+    assert(pc_physmem_alloc_page(&memory) == 0x00100000u);
+    page=pc_physmem_alloc_pages(&memory,4u,4u);
+    assert(page == 0x00104000u);
+    assert((page & ((4u * PC_PHYSMEM_PAGE_SIZE) - 1u)) == 0u);
+    assert(memory.free_pages == 27u);
+    assert(!pc_physmem_alloc_pages(&memory,3u,4u));
+    assert(!pc_physmem_alloc_pages(&memory,1u,3u));
+    assert(!pc_physmem_alloc_pages(&memory,0u,1u));
+
     puts("PC-PHYSMEM: reserved-range page allocator tests PASS");
     return 0;
 }
