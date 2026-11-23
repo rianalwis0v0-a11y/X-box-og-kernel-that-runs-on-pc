@@ -4,7 +4,7 @@
 #include <string.h>
 #include "xbox_pc_boot.h"
 
-static uint8_t image[0x400];
+static uint8_t image[0x600];
 static void put16(uint32_t o, uint16_t v) {
     image[o]=(uint8_t)v; image[o+1]=(uint8_t)(v>>8);
 }
