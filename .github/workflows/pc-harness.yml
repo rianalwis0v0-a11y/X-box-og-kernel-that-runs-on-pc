@@ -58,8 +58,11 @@ jobs:
           status=$?
           set -e
           cat qemu.log
-          grep -F "PC-HARNESS: entered 32-bit kernel" qemu.log
-          grep -F "PC-HARNESS: Multiboot magic PASS" qemu.log
-          grep -F "PC-HARNESS: serial PASS" qemu.log
-          grep -F "PC-HARNESS: halting (Xbox kernel not loaded)" qemu.log
+          grep -F "PC-HARNESS: entered 32-bit bare-metal kernel" qemu.log
+          grep -F "PC-HARNESS: Multiboot handoff PASS" qemu.log
+          grep -F "PC-HAL: executing ring-0 native x86 hardware probes" qemu.log
+grep -F "PC-HAL: CPU vendor" qemu.log
+grep -F "PC-HAL: PCI functions found=" qemu.log
+grep -F "PC-HARNESS: native PC HAL probe PASS" qemu.log
+          grep -F "PC-HARNESS: stopping before Xbox kernel load (not integrated yet)" qemu.log
           test "$status" -eq 124
