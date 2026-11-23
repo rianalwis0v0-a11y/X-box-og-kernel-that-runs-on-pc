@@ -70,5 +70,5 @@ jobs:
           grep -F "PC-HAL: CPU vendor" qemu.log
           grep -F "PC-HAL: PCI functions found=" qemu.log
           grep -F "PC-HARNESS: native PC HAL probe PASS" qemu.log
-          grep -F "PC-HARNESS: stopping before Xbox kernel load (not integrated yet)" qemu.log
+          grep -F "PC-HARNESS: stopping before Xbox kernel execution" qemu.log
           test "$status" -eq 124
