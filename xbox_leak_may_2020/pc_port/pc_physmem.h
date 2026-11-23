@@ -30,4 +30,8 @@ int pc_physmem_reserve(pc_physmem *memory, uint64_t base, uint64_t length);
 /* Allocate one page below 4 GiB; returns its physical address or 0 on failure. */
 uint32_t pc_physmem_alloc_page(pc_physmem *memory);
 
+/* Allocate a contiguous, aligned run of pages below 4 GiB. */
+uint32_t pc_physmem_alloc_pages(pc_physmem *memory, uint32_t page_count,
+                                uint32_t alignment_pages);
+
 #endif
