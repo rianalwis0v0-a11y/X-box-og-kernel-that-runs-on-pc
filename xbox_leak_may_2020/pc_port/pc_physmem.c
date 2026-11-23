@@ -54,19 +54,27 @@ static int walk_map(const uint8_t *bytes, uint32_t length,
         if (size && base > UINT64_MAX - size) return 0;
         if (size) {
             end = base + size;
-            if (!reserved_pass && type == 1u) {
-                /* Only whole pages inside usable RAM are candidates. */
-                uint64_t first = (base + PC_PHYSMEM_PAGE_SIZE - 1u) &
-                                 ~(uint64_t)(PC_PHYSMEM_PAGE_SIZE - 1u);
-                uint64_t last = end & ~(uint64_t)(PC_PHYSMEM_PAGE_SIZE - 1u);
-                mark_pages(m, first, last, 0);
-            } else if (reserved_pass && type != 1u) {
-                uint64_t first = base &
-                                 ~(uint64_t)(PC_PHYSMEM_PAGE_SIZE - 1u);
-                uint64_t last = (end + PC_PHYSMEM_PAGE_SIZE - 1u) &
-                                ~(uint64_t)(PC_PHYSMEM_PAGE_SIZE - 1u);
-                if (last < end) last = PHYS_LIMIT;
-                mark_pages(m, first, last, 1);
+            /*
+             * This allocator only represents physical addresses below 4 GiB.
+             * Clamp before page rounding so a high 64-bit region cannot wrap
+             * its aligned start back to page zero.
+             */
+            if (base < PHYS_LIMIT) {
+                if (end > PHYS_LIMIT) end = PHYS_LIMIT;
+                if (!reserved_pass && type == 1u) {
+                    /* Only whole pages inside usable RAM are candidates. */
+                    uint64_t first = (base + PC_PHYSMEM_PAGE_SIZE - 1u) &
+                                     ~(uint64_t)(PC_PHYSMEM_PAGE_SIZE - 1u);
+                    uint64_t last = end &
+                                    ~(uint64_t)(PC_PHYSMEM_PAGE_SIZE - 1u);
+                    mark_pages(m, first, last, 0);
+                } else if (reserved_pass && type != 1u) {
+                    uint64_t first = base &
+                                     ~(uint64_t)(PC_PHYSMEM_PAGE_SIZE - 1u);
+                    uint64_t last = (end + PC_PHYSMEM_PAGE_SIZE - 1u) &
+                                    ~(uint64_t)(PC_PHYSMEM_PAGE_SIZE - 1u);
+                    mark_pages(m, first, last, 1);
+                }
             }
         }
         offset += step;
@@ -102,9 +110,10 @@ int pc_physmem_reserve(pc_physmem *m, uint64_t base, uint64_t length) {
         !length || base > UINT64_MAX - length)
         return 0;
     end = base + length;
+    if (base >= PHYS_LIMIT) return 1;
+    if (end > PHYS_LIMIT) end = PHYS_LIMIT;
     last = (end + PC_PHYSMEM_PAGE_SIZE - 1u) &
            ~(uint64_t)(PC_PHYSMEM_PAGE_SIZE - 1u);
-    if (last < end) last = PHYS_LIMIT;
     mark_pages(m, base & ~(uint64_t)(PC_PHYSMEM_PAGE_SIZE - 1u),
                last, 1);
     if (m->search_hint >= PC_PHYSMEM_PAGE_COUNT)
