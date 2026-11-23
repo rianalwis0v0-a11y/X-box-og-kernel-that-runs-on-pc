@@ -10,9 +10,9 @@ A milestone is complete only when its test output, build command, compiler versi
 
 ## Stage 0 — source and toolchain inventory
 
-- [ ] Enumerate every file under this directory and identify the actual kernel, headers, libraries, build scripts, and generated binaries.
+- [x] Identify the principal kernel, bootloader, HAL, and build-manifest directories. The full 63,683-entry recursive tree is truncated, so exhaustive inventory remains open.
 - [ ] Record source provenance and licensing. Do not assume a directory name proves that files are an authentic Microsoft leak.
-- [ ] Identify the target CPU mode, calling convention, compiler, linker, object format, and required SDK.
+- [x] Confirm the kernel/HAL target is x86 and the source build uses Microsoft's legacy SOURCES build system and Microsoft linker flags. Exact kernel image entry and ABI still need inspection.
 - [ ] Separate source files from binaries and generated artifacts.
 - [ ] Establish reproducible hashes for the untouched input tree.
 
@@ -20,8 +20,8 @@ A milestone is complete only when its test output, build command, compiler versi
 
 Implement a small, independent x86 boot harness. It must not overwrite or patch the original kernel image.
 
-- [ ] Start in a documented firmware path (UEFI x64 or legacy BIOS; choose one first).
-- [ ] Enter the CPU mode required by the kernel (likely 32-bit protected mode, to be verified from source).
+- [x] Select a first test path: Multiboot v1 via GRUB/QEMU, 32-bit protected mode. This validates the PC harness only; it is not the original Xbox firmware path.
+- [x] Confirm the Xbox HAL source is x86-specific; the isolated harness enters 32-bit protected mode.
 - [ ] Establish a known-good stack, GDT, IDT, and exception handlers.
 - [ ] Capture CPU vendor/features and physical memory map.
 - [ ] Provide serial-console diagnostics and a deterministic halt on fatal errors.
@@ -69,4 +69,14 @@ Record:
 
 ## Current status
 
-This is a plan, not a claim that the leaked source currently builds or boots. The source tree must be inventoried before writing an ABI-specific loader or modifying kernel code. The first implementation target is the isolated PC boot harness and its self-tests.
+Source analysis has confirmed these concrete facts:
+
+- The Xbox kernel source is under xbox trunk/xbox/private/ntos; init/sources.inc builds an init library, and init/ntoskrnl.src defines the xboxkrnl.exe export table.
+- The Xbox HAL has an x86 implementation under halx/i386. xxhal.c initializes the 8259 PIC, RTC, clock, PCI southbridge devices, and system-control interrupt; it also disables the local APIC in its Phase 0 path. halp.h includes Xbox-specific PCI and SMC definitions.
+- halx/sources lists the original assembly and C implementation files, including interrupt, clock, PCI, SMBus/SCI, and Super-I/O code.
+- The boot tree contains bootx/preldr32 and bootx/bldr32. preldr32.c verifies ROM contents/signature, decrypts the bootloader, and derives its entry address from ROM-specific data. That flow cannot be used unchanged on a PC with no Xbox ROM/MCPX.
+- CPXXUPD/private/ntos/init/sources.inc is only an update component manifest and links against prebuilt Xbox libraries; it is not a complete independent kernel build.
+
+The independent PC harness, Makefile, linker script, serial diagnostics, and QEMU CI workflow have been committed under pc_port/. GitHub Actions run #1 is building the harness. Its result must be checked before marking the harness milestone complete.
+
+Next engineering task: inspect bootx/bldr32 startup/loader contract and the halx/i386 initialization dependencies, then define the smallest PC loader-to-kernel handoff. Do not call the original Xbox preloader on a PC: its ROM signature/decryption and fixed-address assumptions are platform-specific.
