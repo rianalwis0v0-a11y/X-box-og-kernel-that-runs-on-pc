@@ -24,6 +24,10 @@ jobs:
         run: python3 -m unittest discover -s xbox_leak_may_2020/pc_port -p 'test_*.py' -v
       - name: Test x86 page-table builder
         run: gcc -std=c11 -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port xbox_leak_may_2020/pc_port/pc_paging.c xbox_leak_may_2020/pc_port/test_pc_paging.c -o /tmp/pc-paging-tests && /tmp/pc-paging-tests
+      - name: Test physical page allocator
+        run: gcc -std=c11 -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port xbox_leak_may_2020/pc_port/pc_physmem.c xbox_leak_may_2020/pc_port/test_pc_physmem.c -o /tmp/pc-physmem-tests && /tmp/pc-physmem-tests
+      - name: Compile freestanding physical page allocator
+        run: gcc -m32 -std=c11 -ffreestanding -fno-builtin -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port -fsyntax-only xbox_leak_may_2020/pc_port/pc_physmem.c
       - name: Test PC HAL and NV2A bridge contracts
         run: >-
           gcc -std=c11 -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port
