@@ -42,6 +42,7 @@ typedef struct multiboot_module {
 static uint8_t physical_bitmap[PC_PHYSMEM_BITMAP_BYTES]
     __attribute__((aligned(4096)));
 static pc_physmem physical_memory;
+static pc_paging_context xbox_page_tables;
 extern uint8_t __kernel_start;
 extern uint8_t __kernel_end;
 
