@@ -23,6 +23,12 @@ qemu-system-i386 -kernel pc-harness.elf -display none -serial stdio -monitor non
 
 The GitHub Actions workflow builds the ELF, checks its Multiboot header, boots it in QEMU, and verifies the serial diagnostics.
 
+## Xbox kernel boot-chain integration (first step)
+
+The harness now accepts an `xboxkrnl.exe` Multiboot module and validates its PE32/i386 headers, entry RVA, image/header sizes, section table, and section raw/virtual ranges. Pass the module to GRUB with the module name exactly `xboxkrnl.exe`. The serial log reports the preferred image base, entry RVA, image size, and section count.
+
+This is deliberately a validation milestone, not a kernel launch: it does not yet map sections, apply PE relocations, resolve imports, initialize the Xbox kernel's expected boot parameters/crypt-key ABI, or jump to its entry point. The original Xbox `preldr32` depends on Xbox ROM/MCPX key material and cannot run unchanged on a PC. The next port step is a PC-native replacement for the ROM-loading portion of `bldr32`, while preserving the original kernel image and its own XBE loader.
+
 ## Critical limitation
 
 This proves only the standalone native PC harness and its early hardware probes. It does **not** load or boot the original Xbox kernel. The Xbox kernel still needs a verified PE32 loader/relocation/import path, its exact boot handoff, native replacement implementations for Xbox-specific HAL services, and integration of the NV2A translation layer. The existing `PC_COMPAT_GUEST` VMCALL adapter is a separate hypervisor-guest experiment; it is not used by this bare-metal harness.
