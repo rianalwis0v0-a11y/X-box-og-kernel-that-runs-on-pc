@@ -152,7 +152,7 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
     const multiboot_info_min *info = (const multiboot_info_min *)(uintptr_t)multiboot_info_address;
     serial_init();
     PcIdtInstallExceptions();
-    serial_write("PC-HAL: exception IDT installed (vectors 0-31)\\n");
+    serial_write("PC-HAL: exception IDT installed (vectors 0-31)\n");
     serial_write("PC-HARNESS: entered 32-bit bare-metal kernel\n");
     if (multiboot_magic != MULTIBOOT_BOOTLOADER_MAGIC || !info) {
         serial_write("PC-HARNESS: ERROR invalid Multiboot handoff\n");
