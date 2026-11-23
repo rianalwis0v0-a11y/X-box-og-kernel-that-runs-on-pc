@@ -28,13 +28,13 @@ int main(void) {
     assert(memory.free_pages == (1024u - 2u));
     assert(pc_physmem_alloc_page(&memory) == 0x00100000u);
     assert(pc_physmem_reserve(&memory,0x00100000u,0x2001u));
-    assert(memory.free_pages == 1018u);
+    assert(memory.free_pages == 1019u);
     page=pc_physmem_alloc_page(&memory);
-    assert(page == 0x00104000u);
-    assert(memory.free_pages == 1017u);
-    assert(pc_physmem_reserve(&memory,0x00104000u,0x1000u));
-    assert(memory.free_pages == 1017u); /* already allocated */
-    assert(pc_physmem_alloc_page(&memory) == 0x00105000u);
+    assert(page == 0x00103000u);
+    assert(memory.free_pages == 1018u);
+    assert(pc_physmem_reserve(&memory,0x00103000u,0x1000u));
+    assert(memory.free_pages == 1018u); /* already allocated */
+    assert(pc_physmem_alloc_page(&memory) == 0x00104000u);
 
     /* Malformed/truncated map must fail closed and expose no free pages. */
     assert(!pc_physmem_init(&memory,bitmap,sizeof(bitmap),mmap_bytes,71u));
