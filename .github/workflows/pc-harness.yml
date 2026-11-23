@@ -94,6 +94,7 @@ jobs:
           grep -F "PC-HAL: CPU vendor" qemu.log
           grep -F "PC-HAL: PCI functions found=" qemu.log
           grep -F "PC-HAL: physical allocator PASS page=" qemu.log
+          grep -F "PC-HAL: Xbox 256 MiB identity + 0x80000000 alias tables built (paging OFF)" qemu.log
           grep -F "PC-HAL: physical allocator PASS page=" qemu.log
           grep -F "PC-HAL: PIT IRQ0 self-test PASS ticks=" qemu.log
           grep -F "PC-HARNESS: native PC HAL probe PASS" qemu.log
