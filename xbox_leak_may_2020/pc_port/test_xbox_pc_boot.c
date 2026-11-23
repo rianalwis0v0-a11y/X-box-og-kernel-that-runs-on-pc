@@ -102,6 +102,22 @@ int main(void) {
         assert(xbox_pc_validate_pe32_file(image,sizeof(image),&loaded_image));
         assert(!xbox_pc_load_pe32_image(&loaded_image,loaded,sizeof(loaded),
                                         0x81010000u,&entry));
+
+        /* A malformed second block must not apply the first block. */
+        make_reloc_image();
+        put32(0x80+24+96+5*8+4,20);
+        put32(0x40c,0x2000); put32(0x410,7);
+        assert(xbox_pc_validate_pe32_file(image,sizeof(image),&loaded_image));
+        assert(!xbox_pc_load_pe32_image(&loaded_image,loaded,sizeof(loaded),
+                                        0x81010000u,&entry));
+        assert(get32(loaded+0x1004)==0x80123456u);
+
+        /* Reject relocation metadata placed in zero-filled image space. */
+        make_reloc_image();
+        put32(0x80+24+96+5*8,0x2800);
+        assert(xbox_pc_validate_pe32_file(image,sizeof(image),&loaded_image));
+        assert(!xbox_pc_load_pe32_image(&loaded_image,loaded,sizeof(loaded),
+                                        0x81010000u,&entry));
     }
     puts("XBOX-PC-BOOT: PE32 validator and mapper tests PASS");
     return 0;
