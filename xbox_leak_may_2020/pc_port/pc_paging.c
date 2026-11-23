@@ -9,6 +9,24 @@ static int aligned_page(uint32_t value) {
     return (value & (PC_PAGING_PAGE_SIZE - 1u)) == 0;
 }
 
+static int context_valid(const pc_paging_context *c) {
+    uint32_t i;
+    if (!c || !c->directory || !c->tables || !c->table_capacity ||
+        c->table_capacity > PC_PAGING_ENTRIES ||
+        c->table_count > c->table_capacity ||
+        !aligned_page(c->directory_physical) ||
+        !aligned_page(c->tables_physical) ||
+        ((uintptr_t)c->directory & (PC_PAGING_PAGE_SIZE - 1u)) ||
+        ((uintptr_t)c->tables & (PC_PAGING_PAGE_SIZE - 1u)))
+        return 0;
+    for (i = 0; i < PC_PAGING_ENTRIES; ++i) {
+        int16_t slot = c->table_slot[i];
+        if (slot < -1 || (slot >= 0 && (uint32_t)slot >= c->table_count))
+            return 0;
+    }
+    return 1;
+}
+
 int pc_paging_init(pc_paging_context *c,
                    uint32_t *directory, uint32_t directory_physical,
                    uint32_t *tables, uint32_t tables_physical,
@@ -50,7 +68,7 @@ int pc_paging_map(pc_paging_context *c,
                   uint32_t length, uint32_t flags) {
     uint8_t needed[PC_PAGING_ENTRIES] = {0};
     uint32_t pages, i, needed_count = 0;
-    if (!c || !c->directory || !c->tables || !length ||
+    if (!context_valid(c) || !length ||
         !aligned_page(virtual_address) || !aligned_page(physical_address) ||
         !aligned_page(length) || (flags & ~PC_PAGING_FLAGS_MASK))
         return 0;
@@ -113,7 +131,7 @@ int pc_paging_translate(const pc_paging_context *c,
                         uint32_t *flags) {
     uint32_t pdi, pti, pte;
     int16_t slot;
-    if (!c || !c->directory || !physical_address) return 0;
+    if (!context_valid(c) || !physical_address) return 0;
     pdi = virtual_address >> 22;
     pti = (virtual_address >> 12) & 0x3ffu;
     slot = c->table_slot[pdi];
