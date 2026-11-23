@@ -98,7 +98,7 @@ The page-table builder rejects overlapping physical or virtual backing storage. 
 
 ## PCI BAR resource decoding
 
-`pc_pci.c/.h` decodes the assigned Base Address Registers of a PCI function into I/O or memory resources, including 64-bit memory BAR pairs and prefetchability. It is intentionally read-only: it does not probe BAR sizes by writing all-ones, alter command-register decode bits, or assume that firmware-assigned addresses are safe to map. Unit tests cover I/O, 32-bit and 64-bit memory BARs, unassigned slots, reserved encodings, truncated 64-bit pairs, and output-capacity errors. This is a resource-decoding primitive only; PCI enumeration, BAR sizing/assignment, firmware resource conflict handling, and MMIO mapping are not yet integrated into the kernel.
+`pc_pci.c/.h` decodes the assigned Base Address Registers of a PCI function into I/O or memory resources, including 64-bit memory BAR pairs and prefetchability. It is intentionally read-only: it does not probe BAR sizes by writing all-ones, alter command-register decode bits, or assume that firmware-assigned addresses are safe to map. Unit tests cover I/O, 32-bit and 64-bit memory BARs, unassigned slots, reserved encodings, truncated 64-bit pairs, and output-capacity errors. The native harness now reads each enumerated function's assigned BAR registers and reports decoded I/O and memory bases over serial. It uses each function's PCI header type to select the valid BAR count and handles 64-bit BAR pairs. This does not size or assign BARs, resolve firmware resource conflicts, enable device decoding, or map MMIO; those operations remain future work.
 
 
 ## Read-only PCI BAR resource discovery
