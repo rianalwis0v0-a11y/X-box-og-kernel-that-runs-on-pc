@@ -160,14 +160,14 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
     report_cpu();
     report_memory(info);
     report_pci();
-    serial_write("PC-HARNESS: native PC HAL probe PASS\\n");
+    serial_write("PC-HARNESS: native PC HAL probe PASS\n");
     {
         xbox_pc_kernel_image image;
         int result = xbox_pc_find_kernel_module(multiboot_magic,
                                                 multiboot_info_address,
                                                 &image);
         if (result == XBOX_PC_BOOT_OK) {
-            serial_write("XBOX-BOOT: xboxkrnl.exe PE32 module validated\\n");
+            serial_write("XBOX-BOOT: xboxkrnl.exe PE32 module validated\n");
             serial_write("XBOX-BOOT: preferred base=");
             serial_hex(image.preferred_base);
             serial_write(" entry RVA=");
@@ -176,16 +176,16 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
             serial_hex(image.image_size);
             serial_write(" sections=");
             serial_hex(image.section_count);
-            serial_write("\\n");
-            serial_write("XBOX-BOOT: validation only; no kernel jump performed\\n");
+            serial_write("\n");
+            serial_write("XBOX-BOOT: validation only; no kernel jump performed\n");
         } else if (result == XBOX_PC_BOOT_NO_KERNEL) {
-            serial_write("XBOX-BOOT: xboxkrnl.exe module not supplied\\n");
+            serial_write("XBOX-BOOT: xboxkrnl.exe module not supplied\n");
         } else if (result == XBOX_PC_BOOT_BAD_PE) {
-            serial_write("XBOX-BOOT: supplied xboxkrnl.exe failed PE32 validation\\n");
+            serial_write("XBOX-BOOT: supplied xboxkrnl.exe failed PE32 validation\n");
         } else {
-            serial_write("XBOX-BOOT: invalid Multiboot boot contract\\n");
+            serial_write("XBOX-BOOT: invalid Multiboot boot contract\n");
         }
     }
-    serial_write("PC-HARNESS: stopping before Xbox kernel execution\\n");
+    serial_write("PC-HARNESS: stopping before Xbox kernel execution\n");
     for (;;) __asm__ volatile ("cli; hlt");
 }
