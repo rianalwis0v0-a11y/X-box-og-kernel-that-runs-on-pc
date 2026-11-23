@@ -187,7 +187,7 @@ int xbox_pc_load_pe32_image(const xbox_pc_kernel_image *image,
                             uint8_t *destination, uint32_t destination_size,
                             uint32_t load_base, uint32_t *entry_address) {
     const uint8_t *f;
-    uint32_t pe, opt, sec, i, delta, reloc_rva, reloc_size, cursor;
+    uint32_t pe, opt, sec, i, delta, reloc_rva, reloc_size;
     uint16_t sections, opt_size;
     xbox_pc_kernel_image checked;
     if (!image || !image->file || !destination || !entry_address ||
