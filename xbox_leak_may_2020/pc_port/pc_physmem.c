@@ -51,7 +51,8 @@ static int walk_map(const uint8_t *bytes, uint32_t length,
         base = read64(bytes + offset + 4u);
         size = read64(bytes + offset + 12u);
         type = read32(bytes + offset + 20u);
-        if (size && base <= UINT64_MAX - size) {
+        if (size && base > UINT64_MAX - size) return 0;
+        if (size) {
             end = base + size;
             if (!reserved_pass && type == 1u) {
                 /* Only whole pages inside usable RAM are candidates. */
@@ -90,6 +91,8 @@ int pc_physmem_init(pc_physmem *m, uint8_t *bitmap,
         m->free_pages = 0;
         return 0;
     }
+    /* Never hand physical address zero to a caller as an allocated page. */
+    bit_set(m, 0u, 1);
     return 1;
 }
 
