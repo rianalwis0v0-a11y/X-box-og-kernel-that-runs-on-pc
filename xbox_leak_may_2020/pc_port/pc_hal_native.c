@@ -82,17 +82,82 @@ void PcHalNativePicRemapMasked(void)
     PcHalNativeRestoreInterrupts(flags);
 }
 
+/* PCI Configuration Mechanism #1 address; offset is rounded to its dword. */
+static uint32_t PcHalNativePciAddress(uint8_t bus, uint8_t device,
+                                      uint8_t function, uint8_t offset)
+{
+    return 0x80000000u | ((uint32_t)bus << 16) |
+           ((uint32_t)device << 11) | ((uint32_t)function << 8) |
+           ((uint32_t)offset & 0xfcu);
+}
+
+uint8_t PcHalNativePciRead8(uint8_t bus, uint8_t device,
+                            uint8_t function, uint8_t offset)
+{
+    uint32_t address, flags;
+    uint8_t value;
+    if (device >= 32u || function >= 8u) return 0xffu;
+    address = PcHalNativePciAddress(bus, device, function, offset);
+    flags = PcHalNativeSaveAndDisableInterrupts();
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov dx, 0xcf8
+        mov eax, address
+        out dx, eax
+        mov dx, 0xcfc
+        mov al, offset
+        and al, 3
+        movzx edx, al
+        add dx, 0xcfc
+        in al, dx
+        mov value, al
+    }
+#else
+    __asm__ volatile ("outl %0, %1" : : "a"(address), "Nd"((uint16_t)0xcf8));
+    __asm__ volatile ("inb %1, %0" : "=a"(value) :
+                      "Nd"((uint16_t)(0xcfcu + (offset & 3u))));
+#endif
+    PcHalNativeRestoreInterrupts(flags);
+    return value;
+}
+
+uint16_t PcHalNativePciRead16(uint8_t bus, uint8_t device,
+                              uint8_t function, uint8_t offset)
+{
+    uint32_t address, flags;
+    uint16_t value;
+    if (device >= 32u || function >= 8u || (offset & 1u) != 0u || offset > 254u)
+        return 0xffffu;
+    address = PcHalNativePciAddress(bus, device, function, offset);
+    flags = PcHalNativeSaveAndDisableInterrupts();
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov dx, 0xcf8
+        mov eax, address
+        out dx, eax
+        mov dx, 0xcfc
+        movzx eax, offset
+        and eax, 2
+        add dx, ax
+        in ax, dx
+        mov value, ax
+    }
+#else
+    __asm__ volatile ("outl %0, %1" : : "a"(address), "Nd"((uint16_t)0xcf8));
+    __asm__ volatile ("inw %1, %0" : "=a"(value) :
+                      "Nd"((uint16_t)(0xcfcu + (offset & 2u))));
+#endif
+    PcHalNativeRestoreInterrupts(flags);
+    return value;
+}
+
 uint32_t PcHalNativePciRead32(uint8_t bus, uint8_t device,
                               uint8_t function, uint8_t offset)
 {
-    uint32_t address;
-    uint32_t value;
-    uint32_t flags;
-    if (device >= 32u || function >= 8u || (offset & 3u) != 0u)
+    uint32_t address, value, flags;
+    if (device >= 32u || function >= 8u || (offset & 3u) != 0u || offset > 252u)
         return 0xffffffffu;
-    address = 0x80000000u | ((uint32_t)bus << 16) |
-              ((uint32_t)device << 11) | ((uint32_t)function << 8) |
-              (uint32_t)offset;
+    address = PcHalNativePciAddress(bus, device, function, offset);
     flags = PcHalNativeSaveAndDisableInterrupts();
 #if defined(_MSC_VER) && defined(_M_IX86)
     __asm {
@@ -109,4 +174,83 @@ uint32_t PcHalNativePciRead32(uint8_t bus, uint8_t device,
 #endif
     PcHalNativeRestoreInterrupts(flags);
     return value;
+}
+
+void PcHalNativePciWrite8(uint8_t bus, uint8_t device, uint8_t function,
+                          uint8_t offset, uint8_t value)
+{
+    uint32_t address, flags;
+    if (device >= 32u || function >= 8u) return;
+    address = PcHalNativePciAddress(bus, device, function, offset);
+    flags = PcHalNativeSaveAndDisableInterrupts();
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov dx, 0xcf8
+        mov eax, address
+        out dx, eax
+        mov dx, 0xcfc
+        movzx eax, offset
+        and eax, 3
+        add dx, ax
+        mov al, value
+        out dx, al
+    }
+#else
+    __asm__ volatile ("outl %0, %1" : : "a"(address), "Nd"((uint16_t)0xcf8));
+    __asm__ volatile ("outb %0, %1" : : "a"(value),
+                      "Nd"((uint16_t)(0xcfcu + (offset & 3u))));
+#endif
+    PcHalNativeRestoreInterrupts(flags);
+}
+
+void PcHalNativePciWrite16(uint8_t bus, uint8_t device, uint8_t function,
+                           uint8_t offset, uint16_t value)
+{
+    uint32_t address, flags;
+    if (device >= 32u || function >= 8u || (offset & 1u) != 0u || offset > 254u)
+        return;
+    address = PcHalNativePciAddress(bus, device, function, offset);
+    flags = PcHalNativeSaveAndDisableInterrupts();
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov dx, 0xcf8
+        mov eax, address
+        out dx, eax
+        mov dx, 0xcfc
+        movzx eax, offset
+        and eax, 2
+        add dx, ax
+        mov ax, value
+        out dx, ax
+    }
+#else
+    __asm__ volatile ("outl %0, %1" : : "a"(address), "Nd"((uint16_t)0xcf8));
+    __asm__ volatile ("outw %0, %1" : : "a"(value),
+                      "Nd"((uint16_t)(0xcfcu + (offset & 2u))));
+#endif
+    PcHalNativeRestoreInterrupts(flags);
+}
+
+void PcHalNativePciWrite32(uint8_t bus, uint8_t device, uint8_t function,
+                           uint8_t offset, uint32_t value)
+{
+    uint32_t address, flags;
+    if (device >= 32u || function >= 8u || (offset & 3u) != 0u || offset > 252u)
+        return;
+    address = PcHalNativePciAddress(bus, device, function, offset);
+    flags = PcHalNativeSaveAndDisableInterrupts();
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov dx, 0xcf8
+        mov eax, address
+        out dx, eax
+        mov dx, 0xcfc
+        mov eax, value
+        out dx, eax
+    }
+#else
+    __asm__ volatile ("outl %0, %1" : : "a"(address), "Nd"((uint16_t)0xcf8));
+    __asm__ volatile ("outl %0, %1" : : "a"(value), "Nd"((uint16_t)0xcfc));
+#endif
+    PcHalNativeRestoreInterrupts(flags);
 }
