@@ -47,7 +47,8 @@ static int name_is_kernel(const char *s) {
 int xbox_pc_validate_pe32_file(const uint8_t *f, uint32_t n,
                          xbox_pc_kernel_image *out) {
     uint32_t pe, opt, sec, i, image_size, headers_size, entry, base;
-    uint32_t section_table_size, section_table_end;
+    uint32_t section_table_size, section_table_end, directory_count;
+    uint32_t directory_bytes;
     uint16_t sections, opt_size;
     int entry_executable = 0;
 
@@ -63,6 +64,25 @@ int xbox_pc_validate_pe32_file(const uint8_t *f, uint32_t n,
 
     opt = pe + 24u;
     if (rd16(f + opt) != PE32_MAGIC) return 0;
+    directory_count = rd32(f + opt + 92u);
+    directory_bytes = opt_size - 96u;
+    if (directory_count > directory_bytes / 8u) return 0;
+    /*
+     * This first loader has no import resolver, TLS callback runner, or
+     * delay-import support. Reject these directories rather than allowing
+     * an image with unresolved startup dependencies to be entered.
+     */
+    if (directory_count > 1u &&
+        (rd32(f + opt + 96u + 8u) || rd32(f + opt + 96u + 12u)))
+        return 0; /* IMAGE_DIRECTORY_ENTRY_IMPORT */
+    if (directory_count > 9u &&
+        (rd32(f + opt + 96u + 9u * 8u) ||
+         rd32(f + opt + 96u + 9u * 8u + 4u)))
+        return 0; /* IMAGE_DIRECTORY_ENTRY_TLS */
+    if (directory_count > 13u &&
+        (rd32(f + opt + 96u + 13u * 8u) ||
+         rd32(f + opt + 96u + 13u * 8u + 4u)))
+        return 0; /* IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT */
     entry = rd32(f + opt + 16u);
     base = rd32(f + opt + 28u);
     image_size = rd32(f + opt + 56u);
