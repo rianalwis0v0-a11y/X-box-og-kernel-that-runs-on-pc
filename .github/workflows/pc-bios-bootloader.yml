@@ -1,0 +1,50 @@
+name: PC BIOS bootloader smoke test
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "xbox_leak_may_2020/pc_port/pc_boot/**"
+      - ".github/workflows/pc-bios-bootloader.yml"
+  pull_request:
+    paths:
+      - "xbox_leak_may_2020/pc_port/pc_boot/**"
+      - ".github/workflows/pc-bios-bootloader.yml"
+  workflow_dispatch:
+
+jobs:
+  bios-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install NASM and QEMU
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm qemu-system-x86
+      - name: Build raw BIOS image
+        working-directory: xbox_leak_may_2020/pc_port/pc_boot
+        run: make
+      - name: Verify boot-sector signature and image layout
+        working-directory: xbox_leak_may_2020/pc_port/pc_boot
+        run: |
+          test "$(wc -c < build/bootsect.bin)" -eq 512
+          test "$(wc -c < build/xbox-pc-boot.img)" -eq 16896
+          test "$(od -An -tx1 -j510 -N2 build/bootsect.bin | tr -d ' \n')" = "55aa"
+      - name: Boot with QEMU BIOS and verify protected-mode stage 2
+        working-directory: xbox_leak_may_2020/pc_port/pc_boot
+        run: |
+          set +e
+          timeout 8s qemu-system-i386 \
+            -machine pc -m 128M \
+            -drive format=raw,file=build/xbox-pc-boot.img,if=ide \
+            -boot c -display none -monitor none -serial stdio \
+            -no-reboot -no-shutdown > build/qemu-serial.log 2>&1
+          rc=$?
+          set -e
+          if [ "$rc" -ne 124 ]; then
+            echo "QEMU did not remain in the expected halt loop (exit $rc)"
+            cat build/qemu-serial.log
+            exit 1
+          fi
+          grep -F "PC Xbox bootloader: stage 2 entered protected mode." build/qemu-serial.log
+          grep -F "Kernel PE loading and Xbox handoff are NOT implemented yet." build/qemu-serial.log
