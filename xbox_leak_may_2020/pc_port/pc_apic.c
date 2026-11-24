@@ -9,6 +9,14 @@
 #define IOAPIC_VERSION 0x01u
 #define IOAPIC_REDIR 0x10u
 #define REDIR_MASK (1u << 16)
+
+int PcApicSupported(void)
+{
+ uint32_t eax=1u, ebx, ecx=0u, edx;
+ __asm__ volatile ("cpuid" : "+a"(eax), "=b"(ebx), "+c"(ecx), "=d"(edx));
+ (void)ebx; (void)ecx;
+ return (edx & (1u << 9)) != 0u;
+}
 static uint64_t rdmsr(uint32_t n){uint32_t l,h;__asm__ volatile("rdmsr":"=a"(l),"=d"(h):"c"(n));return ((uint64_t)h<<32)|l;}
 static void wrmsr(uint32_t n,uint64_t v){__asm__ volatile("wrmsr"::"c"(n),"a"((uint32_t)v),"d"((uint32_t)(v>>32)):"memory");}
 static uint32_t lr(const volatile uint32_t *b,uint32_t r){return b[r/4u];}
@@ -33,6 +41,19 @@ int PcApicAttachIoApics(pc_apic_mmio *m,const pc_acpi_madt_info *a,const uint32_
  for(uint32_t i=0;i<a->ioapic_count;++i){m->ioapic[i]=(volatile uint32_t *)(uintptr_t)va[i];m->ioapic_gsi_base[i]=a->ioapics[i].gsi_base;}
  m->ioapic_count=a->ioapic_count;
  for(uint32_t i=a->ioapic_count;i<PC_ACPI_MAX_IOAPICS;++i){m->ioapic[i]=0;m->ioapic_gsi_base[i]=0;}
+ return 1;
+}
+int PcApicMaskAllIoApics(pc_apic_mmio *m){
+ if(!m||!m->ioapic_count||m->ioapic_count>PC_ACPI_MAX_IOAPICS)return 0;
+ for(uint32_t i=0;i<m->ioapic_count;++i){
+  volatile uint32_t *io=m->ioapic[i];if(!io)return 0;
+  uint32_t max=(ir(io,IOAPIC_VERSION)>>16)&0xffu;
+  for(uint32_t pin=0;pin<=max;++pin){
+   uint32_t reg=IOAPIC_REDIR+pin*2u;
+   if(reg+1u>0xffu)return 0;
+   iw(io,(uint8_t)reg,ir(io,(uint8_t)reg)|REDIR_MASK);
+  }
+ }
  return 1;
 }
 int PcApicRouteGsi(pc_apic_mmio *m,uint32_t gsi,uint8_t vector,uint16_t flags,int masked){
