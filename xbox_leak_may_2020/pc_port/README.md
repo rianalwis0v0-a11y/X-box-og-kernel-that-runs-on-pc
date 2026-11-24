@@ -2,9 +2,11 @@
 
 This is a real ring-0 x86 test kernel, booted directly by a Multiboot v1 bootloader. It does not run as a Windows/Linux process and does not require VT-x, AMD-V, or VMCALL. GRUB is only the bootloader; after handoff, the harness executes privileged CPU and PCI I/O instructions directly.
 
-## VGA boot animation
+## Original Xbox startup animation
 
-The harness now draws a small green-on-black Xbox/PC-port splash in the legacy VGA text buffer at physical address 0xB8000, animates an initialization spinner, and then continues with serial hardware diagnostics. This is a text-mode splash, not the original Xbox dashboard animation or an NV2A accelerated graphics path. QEMU CI checks that the boot code reaches the animation routine; the serial assertion does not visually inspect the screen.
+The placeholder VGA text-mode logo/spinner has been removed from the PC harness. The leaked Xbox startup animation implementation is in `xbox trunk/xbox/private/ntos/ani2`: `animate.c` starts the animation on an NT system thread, while `renderer.cpp`, `scene_renderer.cpp`, `logo_renderer.cpp`, and the shader/geometry assets implement the animated Xbox logo. `mslogo.cpp` handles the later Microsoft-logo stage, and `stboot.c` contains the boot sound sequencer.
+
+This code is **not yet executable in the PC harness**. It expects Xbox NT kernel thread/event/memory services, the Xbox D3D8/XGraphics interfaces, NV2A rendering, and boot-time resource setup. The PC port must supply those interfaces (including the NV2A-to-PC-GPU translation backend) before it can start the authentic animation. The harness intentionally shows no substitute animation.
 
 ## Current executable milestone
 
