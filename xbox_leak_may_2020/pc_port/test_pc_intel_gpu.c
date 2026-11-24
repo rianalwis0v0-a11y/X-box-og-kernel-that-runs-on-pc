@@ -10,6 +10,8 @@ int main(void)
         0xf0000000u, 0x00000001u, 0, 0, 0, 0
     };
     assert(PcIntelGpuClassifyDevice(0x3e91) == PC_INTEL_GEN9);
+    /* Pentium Gold 5405U integrated UHD Graphics 610 (Whiskey Lake). */
+    assert(PcIntelGpuClassifyDevice(0x3ea1) == PC_INTEL_GEN9);
     assert(PcIntelGpuClassifyDevice(0x9a49) == PC_INTEL_GEN12);
     assert(PcIntelGpuClassifyDevice(0xffff) == PC_INTEL_GEN_UNKNOWN);
     assert(PcIntelGpuBuildInfo(0x8086, 0x3e91, 1,
