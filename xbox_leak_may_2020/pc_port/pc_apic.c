@@ -1,133 +1,53 @@
 #include "pc_apic.h"
-
-#define IA32_APIC_BASE_MSR 0x1bu
-#define APIC_REG_ID 0x020u
-#define APIC_REG_TPR 0x080u
-#define APIC_REG_EOI 0x0b0u
-#define APIC_REG_SVR 0x0f0u
-#define APIC_REG_LVT_TIMER 0x320u
-#define APIC_REG_LVT_THERMAL 0x330u
-#define APIC_REG_LVT_PERF 0x340u
-#define APIC_REG_LVT_LINT0 0x350u
-#define APIC_REG_LVT_LINT1 0x360u
-#define APIC_REG_LVT_ERROR 0x370u
-#define APIC_SVR_ENABLE (1u << 8)
-#define IOAPIC_REG_SELECT 0x00u
-#define IOAPIC_REG_WINDOW 0x10u
-#define IOAPIC_REG_VERSION 0x01u
-#define IOAPIC_REG_REDIR_BASE 0x10u
-#define IOAPIC_REDIR_MASK (1u << 16)
-
-#if defined(__i386__) || defined(__x86_64__)
-static uint64_t read_msr(uint32_t msr)
-{
-    uint32_t lo, hi;
-    __asm__ volatile ("rdmsr" : "=a"(lo), "=d"(hi) : "c"(msr));
-    return ((uint64_t)hi << 32) | lo;
+#define APIC_BASE_MSR 0x1bu
+#define LAPIC_ID 0x020u
+#define LAPIC_TPR 0x080u
+#define LAPIC_EOI 0x0b0u
+#define LAPIC_SVR 0x0f0u
+#define IOREGSEL 0x00u
+#define IOWIN 0x10u
+#define IOAPIC_VERSION 0x01u
+#define IOAPIC_REDIR 0x10u
+#define REDIR_MASK (1u << 16)
+static uint64_t rdmsr(uint32_t n){uint32_t l,h;__asm__ volatile("rdmsr":"=a"(l),"=d"(h):"c"(n));return ((uint64_t)h<<32)|l;}
+static void wrmsr(uint32_t n,uint64_t v){__asm__ volatile("wrmsr"::"c"(n),"a"((uint32_t)v),"d"((uint32_t)(v>>32)):"memory");}
+static uint32_t lr(const volatile uint32_t *b,uint32_t r){return b[r/4u];}
+static void lw(volatile uint32_t *b,uint32_t r,uint32_t v){b[r/4u]=v;(void)b[LAPIC_ID/4u];}
+static uint32_t ir(volatile uint32_t *b,uint8_t r){b[IOREGSEL/4u]=r;return b[IOWIN/4u];}
+static void iw(volatile uint32_t *b,uint8_t r,uint32_t v){b[IOREGSEL/4u]=r;b[IOWIN/4u]=v;}
+int PcApicEnableLocal(pc_apic_mmio *m,uint32_t va){
+ if(!m||!va||(va&0xfffu))return 0;
+ uint64_t base=rdmsr(APIC_BASE_MSR);
+ if(base&(1ull<<10))return 0; /* x2APIC is deliberately unsupported */
+ base=(base&~0xfffff000ull)|(uint64_t)va|(1ull<<11);wrmsr(APIC_BASE_MSR,base);
+ volatile uint32_t *b=(volatile uint32_t *)(uintptr_t)va;m->local_apic=b;
+ lw(b,LAPIC_TPR,0); 
+ /* Mask all local LVT sources before enabling the software APIC. */
+ const uint32_t lvt[]={0x320u,0x330u,0x340u,0x350u,0x360u,0x370u};
+ for(uint32_t i=0;i<sizeof(lvt)/sizeof(lvt[0]);++i)lw(b,lvt[i],1u<<16);
+ lw(b,LAPIC_SVR,(lr(b,LAPIC_SVR)&~0xffu)|0xffu|(1u<<8));return 1;
 }
-static void write_msr(uint32_t msr, uint64_t value)
-{
-    uint32_t lo = (uint32_t)value, hi = (uint32_t)(value >> 32);
-    __asm__ volatile ("wrmsr" : : "c"(msr), "a"(lo), "d"(hi) : "memory");
+int PcApicAttachIoApics(pc_apic_mmio *m,const pc_acpi_madt_info *a,const uint32_t *va){
+ if(!m||!a||!va||!a->ioapic_count||a->ioapic_count>PC_ACPI_MAX_IOAPICS)return 0;
+ for(uint32_t i=0;i<a->ioapic_count;++i)if(!va[i]||(va[i]&0xfffu)||!a->ioapics[i].address)return 0;
+ for(uint32_t i=0;i<a->ioapic_count;++i){m->ioapic[i]=(volatile uint32_t *)(uintptr_t)va[i];m->ioapic_gsi_base[i]=a->ioapics[i].gsi_base;}
+ m->ioapic_count=a->ioapic_count;
+ for(uint32_t i=a->ioapic_count;i<PC_ACPI_MAX_IOAPICS;++i){m->ioapic[i]=0;m->ioapic_gsi_base[i]=0;}
+ return 1;
 }
-#else
-#error "APIC support requires x86"
-#endif
-
-static uint32_t lapic_read(const volatile uint32_t *base, uint32_t reg)
-{
-    return base[reg / sizeof(uint32_t)];
+int PcApicRouteGsi(pc_apic_mmio *m,uint32_t gsi,uint8_t vector,uint16_t flags,int masked){
+ if(!m||!m->local_apic||vector<0x20u||m->ioapic_count>PC_ACPI_MAX_IOAPICS)return 0;
+ uint32_t pol=flags&3u,trig=(flags>>2)&3u;if(pol==2u||trig==2u)return 0;
+ if(!pol)pol=1u;if(!trig)trig=1u; /* ACPI conforming ISA defaults: high/edge */
+ uint32_t dest=lr(m->local_apic,LAPIC_ID)&0xff000000u;
+ for(uint32_t i=0;i<m->ioapic_count;++i){
+  volatile uint32_t *io=m->ioapic[i];if(!io||gsi<m->ioapic_gsi_base[i])continue;
+  uint32_t ver=ir(io,IOAPIC_VERSION),max=(ver>>16)&0xffu,pin=gsi-m->ioapic_gsi_base[i];
+  if(pin>max)continue;
+  uint32_t reg=IOAPIC_REDIR+pin*2u;if(reg+1u>0xffu)return 0;
+  uint32_t low=vector;if(pol==3u)low|=1u<<13;if(trig==3u)low|=1u<<15;if(masked)low|=REDIR_MASK;
+  iw(io,(uint8_t)reg,low|REDIR_MASK);iw(io,(uint8_t)(reg+1u),dest);iw(io,(uint8_t)reg,low);return 1;
+ }
+ return 0;
 }
-static void lapic_write(volatile uint32_t *base, uint32_t reg, uint32_t value)
-{
-    base[reg / sizeof(uint32_t)] = value;
-    (void)base[APIC_REG_ID / sizeof(uint32_t)];
-}
-static uint32_t ioapic_read(volatile uint32_t *base, uint8_t reg)
-{
-    base[IOAPIC_REG_SELECT / 4u] = reg;
-    return base[IOAPIC_REG_WINDOW / 4u];
-}
-static void ioapic_write(volatile uint32_t *base, uint8_t reg, uint32_t value)
-{
-    base[IOAPIC_REG_SELECT / 4u] = reg;
-    base[IOAPIC_REG_WINDOW / 4u] = value;
-}
-
-int PcApicEnableLocal(pc_apic_mmio *mmio, uint32_t local_apic_virtual)
-{
-    uint64_t apic_base;
-    volatile uint32_t *base;
-    if (!mmio || !local_apic_virtual || (local_apic_virtual & 0xfffu))
-        return 0;
-    apic_base = read_msr(IA32_APIC_BASE_MSR);
-    if ((apic_base & (1ull << 10)) != 0u) return 0; /* x2APIC needs a distinct driver */
-    apic_base &= ~0xfffff000ull;
-    apic_base |= (uint64_t)local_apic_virtual;
-    apic_base |= (1ull << 11);
-    write_msr(IA32_APIC_BASE_MSR, apic_base);
-
-    base = (volatile uint32_t *)(uintptr_t)local_apic_virtual;
-    mmio->local_apic = base;
-    lapic_write(base, APIC_REG_TPR, 0u);
-    lapic_write(base, APIC_REG_LVT_TIMER, 1u << 16);
-    lapic_write(base, APIC_REG_LVT_THERMAL, 1u << 16);
-    lapic_write(base, APIC_REG_LVT_PERF, 1u << 16);
-    lapic_write(base, APIC_REG_LVT_LINT0, 1u << 16);
-    lapic_write(base, APIC_REG_LVT_LINT1, 1u << 16);
-    lapic_write(base, APIC_REG_LVT_ERROR, 1u << 16);
-    lapic_write(base, APIC_REG_SVR,
-                (lapic_read(base, APIC_REG_SVR) & ~0xffu) |
-                0xffu | APIC_SVR_ENABLE);
-    return 1;
-}
-
-int PcApicAttachIoApics(pc_apic_mmio *mmio,
-                        const pc_acpi_madt_info *madt,
-                        const uint32_t *ioapic_virtual)
-{
-    uint32_t i;
-    if (!mmio || !madt || !ioapic_virtual ||
-        madt->ioapic_count == 0u || madt->ioapic_count > PC_ACPI_MAX_IOAPICS)
-        return 0;
-    for (i = 0; i < madt->ioapic_count; ++i) {
-        if (!ioapic_virtual[i] || (ioapic_virtual[i] & 0xfffu)) return 0;
-        mmio->ioapic[i] = (volatile uint32_t *)(uintptr_t)ioapic_virtual[i];
-    }
-    for (; i < PC_ACPI_MAX_IOAPICS; ++i) mmio->ioapic[i] = 0;
-    return 1;
-}
-
-int PcApicRouteGsi(pc_apic_mmio *mmio, uint32_t gsi, uint8_t vector,
-                   uint16_t acpi_flags, int masked)
-{
-    uint32_t i;
-    uint32_t polarity = acpi_flags & 3u;
-    uint32_t trigger = (acpi_flags >> 2) & 3u;
-    uint32_t apic_id;
-    if (!mmio || !mmio->local_apic || vector < 0x20u ||
-        polarity == 2u || trigger == 2u) return 0;
-    apic_id = lapic_read(mmio->local_apic, APIC_REG_ID) >> 24;
-    for (i = 0; i < PC_ACPI_MAX_IOAPICS; ++i) {
-        volatile uint32_t *io = mmio->ioapic[i];
-        uint32_t version, max_redir, low, high, reg, pin;
-        uint32_t low_flags = 0;
-        if (!io) continue;
-        version = ioapic_read(io, IOAPIC_REG_VERSION);
-        max_redir = (version >> 16) & 0xffu;
-        /* The IOAPIC's GSI base comes from the MADT; caller ordering is stable. */
-        (void)max_redir;
-        (void)low_flags;
-        (void)low;
-        (void)high;
-        (void)reg;
-        (void)pin;
-    }
-    return 0;
-}
-
-void PcApicLocalEoi(const pc_apic_mmio *mmio)
-{
-    if (mmio && mmio->local_apic)
-        lapic_write(mmio->local_apic, APIC_REG_EOI, 0u);
-}
+void PcApicLocalEoi(const pc_apic_mmio *m){if(m&&m->local_apic)lw(m->local_apic,LAPIC_EOI,0);}
