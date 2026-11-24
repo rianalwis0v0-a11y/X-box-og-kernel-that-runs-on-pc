@@ -6,8 +6,8 @@ LD := $(CROSS)gcc
 CFLAGS := -m32 -std=c11 -ffreestanding -fno-pie -fno-stack-protector -fno-builtin -Wall -Wextra -Werror -O2
 LDFLAGS := -m32 -nostdlib -no-pie -Wl,-T,linker.ld -Wl,--build-id=none
 
-.PHONY: all clean check-tools
-all: pc-harness.elf
+.PHONY: all clean check-tools iso
+all: pc-harness.elf pc-port-harness.iso
 
 check-tools:
 	@command -v $(CC) >/dev/null || { echo "Missing $(CC); install an i686-elf GCC toolchain"; exit 1; }
@@ -67,5 +67,14 @@ pc-harness.elf: boot.o kernel.o nv2a_vertex_shader.o xbox_pc_boot.o pc_paging.o 
 	$(LD) $(LDFLAGS) -o $@ boot.o kernel.o nv2a_vertex_shader.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_hal_contract.o pc_hal_native_backend.o pc_pci.o pc_acpi.o pc_apic.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o
 	@file $@
 
+iso: pc-harness.elf grub.cfg
+	@command -v grub-mkrescue >/dev/null || { echo "Missing grub-mkrescue (install grub-pc-bin and xorriso)"; exit 1; }
+	rm -rf iso-root
+	mkdir -p iso-root/boot/grub
+	cp pc-harness.elf iso-root/boot/pc-harness.elf
+	cp grub.cfg iso-root/boot/grub/grub.cfg
+	grub-mkrescue -o pc-port-harness.iso iso-root
+
 clean:
-	rm -f boot.o kernel.o nv2a_vertex_shader.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_hal_contract.o pc_hal_native_backend.o pc_pci.o pc_acpi.o pc_apic.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o pc-harness.elf
+	rm -rf iso-root
+	rm -f boot.o kernel.o nv2a_vertex_shader.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_hal_contract.o pc_hal_native_backend.o pc_pci.o pc_acpi.o pc_apic.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o pc-harness.elf pc-port-harness.iso
