@@ -410,7 +410,7 @@ static void report_pci(void) {
                         serial_hex(intel_gpu.generation);
                         serial_write(" BARs=");
                         serial_hex(intel_gpu.resource_count);
-                        serial_write(" (discovery only; backend not active)\\n");
+                        serial_write(" (discovery only; backend not active)\n");
                     }
                     ++found;
                     serial_write("PC-HAL: PCI device ");
