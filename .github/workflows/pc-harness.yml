@@ -97,6 +97,7 @@ jobs:
           grep -F "PC-HAL: VGA text-mode boot animation rendered" qemu.log
           grep -F "PC-HAL: flat GDT installed" qemu.log
           grep -F "PC-HAL: exception IDT installed (vectors 0-31)" qemu.log
+          grep -F "PC-HAL: native backend ABI contract PASS (PCI + PIC/PIT; MMIO unsupported)" qemu.log
           grep -F "PC-HARNESS: entered 32-bit bare-metal kernel" qemu.log
           grep -F "PC-HARNESS: Multiboot handoff PASS" qemu.log
           grep -F "PC-HAL: executing ring-0 native x86 hardware probes" qemu.log
