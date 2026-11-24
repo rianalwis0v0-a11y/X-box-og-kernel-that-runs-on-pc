@@ -48,6 +48,8 @@ static uint8_t physical_bitmap[PC_PHYSMEM_BITMAP_BYTES]
     __attribute__((aligned(4096)));
 static pc_physmem physical_memory;
 static pc_paging_context xbox_page_tables;
+static pc_acpi_madt_info firmware_madt;
+static int firmware_madt_valid;
 extern uint8_t __kernel_start;
 extern uint8_t __kernel_end;
 
@@ -161,6 +163,8 @@ static void report_acpi(void)
         pc_acpi_madt_info madt;
         if (PcAcpiFindMadt(&rsdp, &madt)) {
             uint32_t i;
+            firmware_madt = madt;
+            firmware_madt_valid = 1;
             serial_write("PC-ACPI: MADT parsed; LAPIC physical=");
             serial_hex(madt.local_apic_address);
             serial_write(" IOAPIC count=");
@@ -280,6 +284,20 @@ static int initialize_physical_allocator(const multiboot_info_min *info,
         !pc_physmem_reserve(&physical_memory, 0xFEC00000u, 0x1000u) ||
         !pc_physmem_reserve(&physical_memory, 0xFEE00000u, 0x1000u))
         return 9;
+
+    /* Reserve every firmware-reported APIC page, not just PC defaults. */
+    if (firmware_madt_valid) {
+        if (!firmware_madt.local_apic_address ||
+            !pc_physmem_reserve(&physical_memory,
+                                firmware_madt.local_apic_address, 0x1000u))
+            return 10;
+        for (i = 0; i < firmware_madt.ioapic_count; ++i) {
+            if (!firmware_madt.ioapics[i].address ||
+                !pc_physmem_reserve(&physical_memory,
+                                    firmware_madt.ioapics[i].address, 0x1000u))
+                return 11;
+        }
+    }
     return 0;
 }
 
@@ -308,6 +326,32 @@ static int test_legacy_irq_routes(void)
     PcIrqMask(1u, 1);
     PcIrqMask(12u, 1);
     return keyboard_count == 1u && slave_count == 1u;
+}
+
+static int map_firmware_apic_mmio(void)
+{
+    uint32_t i;
+    if (!firmware_madt_valid || !firmware_madt.local_apic_address)
+        return 0;
+    if ((firmware_madt.local_apic_address & 0xfffu) != 0u ||
+        firmware_madt.local_apic_address < 0x10000000u)
+        return 0;
+    if (!pc_paging_map(&xbox_page_tables,
+                       firmware_madt.local_apic_address,
+                       firmware_madt.local_apic_address,
+                       PC_PAGING_PAGE_SIZE,
+                       PC_PAGING_WRITE | PC_PAGING_PWT | PC_PAGING_PCD))
+        return 0;
+    for (i = 0; i < firmware_madt.ioapic_count; ++i) {
+        uint32_t address = firmware_madt.ioapics[i].address;
+        if (!address || (address & 0xfffu) != 0u ||
+            address < 0x10000000u ||
+            !pc_paging_map(&xbox_page_tables, address, address,
+                           PC_PAGING_PAGE_SIZE,
+                           PC_PAGING_WRITE | PC_PAGING_PWT | PC_PAGING_PCD))
+            return 0;
+    }
+    return 1;
 }
 
 static void report_pci(void) {
@@ -452,19 +496,22 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
              * disabled until the PC-specific device map is complete.
              */
             {
+                /* 129 base pages plus room for up to nine APIC MMIO PDEs. */
                 uint32_t block = pc_physmem_alloc_pages(&physical_memory,
-                                                        129u, 1u);
+                                                        138u, 1u);
                 if (block &&
                     pc_paging_init(&xbox_page_tables,
                         (uint32_t *)(uintptr_t)block, block,
                         (uint32_t *)(uintptr_t)(block + PC_PAGING_PAGE_SIZE),
-                        block + PC_PAGING_PAGE_SIZE, 128u) &&
+                        block + PC_PAGING_PAGE_SIZE, 137u) &&
                     pc_paging_map(&xbox_page_tables, 0u, 0u,
                                   0x10000000u, PC_PAGING_WRITE) &&
                     pc_paging_map(&xbox_page_tables, 0x80000000u, 0u,
                                   0x10000000u, PC_PAGING_WRITE)) {
                     uint32_t identity_pa, alias_pa, page_flags;
-                    if (xbox_page_tables.table_count == 128u &&
+                    int apic_map_ok = !firmware_madt_valid ||
+                                      map_firmware_apic_mmio();
+                    if (xbox_page_tables.table_count >= 128u &&
                         pc_paging_translate(&xbox_page_tables, 0x00123456u,
                                             &identity_pa, &page_flags) &&
                         identity_pa == 0x00123456u &&
@@ -473,12 +520,29 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
                                             &alias_pa, &page_flags) &&
                         alias_pa == 0x00123456u &&
                         page_flags == PC_PAGING_WRITE) {
-                        serial_write("PC-HAL: Xbox 256 MiB identity + 0x80000000 alias tables verified (paging OFF)\n");
+                        serial_write("PC-HAL: Xbox 256 MiB identity + 0x80000000 alias tables verified (paging OFF)\\n");
+                        if (apic_map_ok && firmware_madt_valid) {
+                            uint32_t apic_pa, apic_flags;
+                            if (pc_paging_translate(&xbox_page_tables,
+                                    firmware_madt.local_apic_address,
+                                    &apic_pa, &apic_flags) &&
+                                apic_pa == firmware_madt.local_apic_address &&
+                                apic_flags == (PC_PAGING_WRITE |
+                                               PC_PAGING_PWT | PC_PAGING_PCD)) {
+                                serial_write("PC-HAL: firmware LAPIC/IOAPIC MMIO mappings prepared uncached (paging OFF)\\n");
+                            } else {
+                                serial_write("PC-HAL: APIC MMIO mapping verification ERROR\\n");
+                            }
+                        } else if (firmware_madt_valid) {
+                            serial_write("PC-HAL: APIC MMIO mapping preparation ERROR\\n");
+                        } else {
+                            serial_write("PC-HAL: no MADT; APIC MMIO mappings skipped\\n");
+                        }
                     } else {
-                        serial_write("PC-HAL: Xbox page-table translation self-test ERROR\n");
+                        serial_write("PC-HAL: Xbox page-table translation self-test ERROR\\n");
                     }
                 } else {
-                    serial_write("PC-HAL: Xbox page-table layout build ERROR\n");
+                    serial_write("PC-HAL: Xbox page-table layout build ERROR\\n");
                 }
             }
         } else {
