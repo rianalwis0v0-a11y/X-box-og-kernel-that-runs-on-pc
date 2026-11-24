@@ -321,6 +321,7 @@ Return Value:
 #endif
     const PHAL_PCISPACE_ACCESS_ROUTINE *PCISpaceAccessors;
     ULONG BytesTransferred;
+    ULONG OldEFlags;
     UCHAR AccessIndex;
 
     ASSERT(BusNumber <= PCI_MAX_BRIDGE_NUMBER);
@@ -343,8 +344,6 @@ Return Value:
     // Preserve the caller's IF state: this routine can run with interrupts
     // already disabled during early HAL initialization or at elevated IRQL.
     //
-
-    ULONG OldEFlags;
 
     __asm {
         pushfd
