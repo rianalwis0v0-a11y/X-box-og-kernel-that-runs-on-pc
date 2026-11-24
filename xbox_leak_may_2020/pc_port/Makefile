@@ -7,7 +7,7 @@ CFLAGS := -m32 -std=c11 -ffreestanding -fno-pie -fno-stack-protector -fno-builti
 LDFLAGS := -m32 -nostdlib -no-pie -Wl,-T,linker.ld -Wl,--build-id=none
 
 .PHONY: all clean check-tools iso
-all: pc-harness.elf pc-port-harness.iso
+all: pc-harness.elf iso
 
 check-tools:
 	@command -v $(CC) >/dev/null || { echo "Missing $(CC); install an i686-elf GCC toolchain"; exit 1; }
