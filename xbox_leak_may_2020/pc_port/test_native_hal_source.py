@@ -42,6 +42,20 @@ class NativeXboxHalSourceTests(unittest.TestCase):
         self.assertIn("return;", native)
         self.assertIn("HalReadWritePCISpace remains the generic PCI config-space interface.", native)
 
+    def test_firmware_apic_pages_are_reserved_and_mapped_uncached(self):
+        source = (Path(__file__).resolve().parent / "kernel.c").read_text(encoding="utf-8")
+        self.assertIn("firmware_madt = madt;", source)
+        self.assertIn("pc_physmem_reserve(&physical_memory", source)
+        self.assertIn("PC_PAGING_WRITE | PC_PAGING_PWT | PC_PAGING_PCD", source)
+        self.assertIn("map_firmware_apic_mmio()", source)
+        self.assertIn("firmware LAPIC/IOAPIC MMIO mappings prepared uncached (paging OFF)", source)
+
+    def test_apic_page_tables_are_not_activated_prematurely(self):
+        source = (Path(__file__).resolve().parent / "kernel.c").read_text(encoding="utf-8")
+        self.assertNotIn("mov %0, %%cr3", source)
+        self.assertNotIn("mov %%eax, %%cr0", source)
+        self.assertIn("paging OFF", source)
+
     def test_pci_config_access_restores_the_callers_interrupt_flag(self):
         source = (HAL / "i386" / "pcispace.c").read_text(encoding="utf-8")
         self.assertIn("pushfd", source)
