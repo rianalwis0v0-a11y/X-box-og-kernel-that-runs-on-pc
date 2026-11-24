@@ -42,3 +42,26 @@ The PC harness now has a freestanding Intel display-controller discovery module.
 The kernel PCI scan reports detected Intel display devices and their classified generation. CI tests device classification, rejection of non-Intel/non-display functions, BAR decoding, and a 32-bit freestanding compile.
 
 **This is discovery and resource-description groundwork only. It is not an Intel GPU driver.** It does not enable PCI memory decoding or bus mastering, map BARs, initialise GT power/forcewake, allocate GGTT/GTT or local memory, submit render/BLT commands, compile NV2A shaders, manage fences, or drive display output. No GPU registers are touched. Generation-specific command backends must be implemented and validated independently; support for every Intel iGPU generation is not yet present.
+
+## Intel UHD 610 backend: use Linux i915 as the hardware reference
+
+The first physical target is the Whiskey Lake-U Intel UHD Graphics 610 (PCI vendor/device 8086:3EA1). Linux upstream i915 supports this device family; the kernel PCI device database identifies 3EA1 as Whiskey Lake-U GT1 UHD 610. The i915 driver is therefore a proven hardware reference for Gen9/Gen9.5 initialization, GT power management, memory translation, command submission, synchronization, and display programming.
+
+Do not attempt to load the Linux `i915.ko` binary in the Xbox kernel. It depends on Linux DRM, GEM, Linux PCI, DMA, interrupt, memory-management, workqueue, and kernel APIs that are not provided by the Xbox NT kernel. Porting the complete driver would amount to porting a substantial part of Linux's DRM and kernel support layer.
+
+### Porting strategy
+
+1. Keep the existing Xbox kernel and XBE loader as the guest-facing NT/Xbox environment.
+2. Treat upstream i915 source and Intel PRM documentation as the hardware-behaviour reference, not as a drop-in binary.
+3. First implement a minimal, isolated Gen9.5 native backend behind the PC HAL: PCI resource validation, BAR mapping, MMIO accessors, safe GT wake/forcewake sequencing, and a read-only device/status probe.
+4. Add graphics memory setup (stolen memory/GTT or GGTT as applicable), then a minimal ring/engine submission path with explicit fences and timeout recovery.
+5. Add a framebuffer/display path for the first visible boot output. Only then translate the Xbox NV2A methods and shader operations needed by the original startup animation.
+6. Keep other Intel generations behind separate generation-specific operations; do not assume UHD 610 register sequences work on every Intel iGPU.
+
+### Licensing boundary
+
+The Linux i915 driver is GPL-2.0. The Xbox source tree contains Microsoft-originated code with separate licensing restrictions. Do not copy i915 implementation code into that tree without a deliberate legal review of the combined distribution and corresponding source obligations. Prefer using public hardware documentation and independently written adapter code; if GPL code is reused, keep its licensing and distribution obligations explicit.
+
+### Current status
+
+The existing Intel module still performs PCI discovery/classification only. No i915 code has been copied, no Intel BAR is mapped, no GT is initialized, and no rendering/display test has been performed. The UHD 610 backend is not yet implemented.
