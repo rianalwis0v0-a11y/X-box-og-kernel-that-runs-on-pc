@@ -7,6 +7,7 @@
 #include "pc_paging.h"
 #include "pc_hal_native.h"
 #include "pc_pci.h"
+#include "pc_intel_gpu.h"
 #include "pc_acpi.h"
 #include "pc_hal_native_backend.h"
 #include "nv2a_vertex_shader.h"
@@ -382,8 +383,9 @@ static void report_pci(void) {
                 {
                     uint32_t class_info = PcHalNativePciRead32(
                         (uint8_t)bus, (uint8_t)device, (uint8_t)function, 0x08u);
-                    uint32_t raw_bars[PC_PCI_MAX_BARS];
+                    uint32_t raw_bars[PC_PCI_MAX_BARS] = {0, 0, 0, 0, 0, 0};
                     pc_pci_bar decoded_bars[PC_PCI_MAX_BARS];
+                    pc_intel_gpu_info intel_gpu;
                     uint32_t header_type = (function_header >> 16) & 0x7fu;
                     uint8_t bar_count = header_type == 0u ? 6u :
                                         (header_type == 1u ? 2u :
@@ -399,6 +401,17 @@ static void report_pci(void) {
                     if (bar_count)
                         decoded_count = PcPciDecodeBars(raw_bars, bar_count,
                             decoded_bars, PC_PCI_MAX_BARS);
+                    if ((vendor == PC_INTEL_PCI_VENDOR_ID) &&
+                        PcIntelGpuBuildInfo((uint16_t)vendor, (uint16_t)product,
+                            (uint8_t)class_info, class_info, raw_bars, &intel_gpu)) {
+                        serial_write("PC-GPU: Intel integrated/display GPU detected device=");
+                        serial_hex(product);
+                        serial_write(" generation=");
+                        serial_hex(intel_gpu.generation);
+                        serial_write(" BARs=");
+                        serial_hex(intel_gpu.resource_count);
+                        serial_write(" (discovery only; backend not active)\\n");
+                    }
                     ++found;
                     serial_write("PC-HAL: PCI device ");
                     serial_hex(bus); serial_putc(':');
