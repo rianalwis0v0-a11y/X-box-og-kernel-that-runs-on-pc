@@ -110,6 +110,7 @@ jobs:
           grep -F "PC-HAL: Xbox 256 MiB identity + 0x80000000 alias tables verified (paging OFF)" qemu.log
           grep -F "PC-HAL: physical allocator PASS page=" qemu.log
           grep -F "PC-HAL: PIT IRQ0 self-test PASS ticks=" qemu.log
+          grep -F "PC-HAL: legacy PIC IRQ1 + IRQ12 dispatch/EOI self-test PASS" qemu.log
           grep -F "PC-HARNESS: native PC HAL probe PASS" qemu.log
           grep -F "NV2A: XboxRuntime freestanding microcode validator PASS" qemu.log
           grep -F "XBOX-BOOT: xboxkrnl.exe module not supplied" qemu.log
