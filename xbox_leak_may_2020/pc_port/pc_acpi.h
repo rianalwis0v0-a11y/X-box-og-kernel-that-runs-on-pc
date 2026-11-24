@@ -48,5 +48,7 @@ int PcAcpiValidateSdt(const void *data, size_t available,
 /* Parse MADT type 1 (I/O APIC), type 2 (interrupt source override),
    and type 5 (local APIC address override). Unknown records are skipped. */
 int PcAcpiParseMadt(const void *data, size_t available, pc_acpi_madt_info *out);
+/* Walk firmware RSDT/XSDT and parse the first valid MADT (32-bit physical access). */
+int PcAcpiFindMadt(const pc_acpi_rsdp_info *rsdp, pc_acpi_madt_info *out);
 
 #endif
