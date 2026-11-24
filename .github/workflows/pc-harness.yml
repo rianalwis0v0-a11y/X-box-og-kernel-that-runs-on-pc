@@ -81,7 +81,7 @@ jobs:
         run: gcc -m32 -std=c11 -Wall -Wextra -Werror -DPC_COMPAT_GUEST -Ixbox_leak_may_2020/pc_port -fsyntax-only xbox_leak_may_2020/pc_port/pc_hal_guest.c
       - name: Build standalone 32-bit harness
         working-directory: xbox_leak_may_2020/pc_port
-        run: make CROSS= pc-harness.elf pc-port-harness.iso
+        run: make CROSS= pc-harness.elf iso
       - name: Validate Multiboot header
         working-directory: xbox_leak_may_2020/pc_port
         run: grub-file --is-x86-multiboot pc-harness.elf
