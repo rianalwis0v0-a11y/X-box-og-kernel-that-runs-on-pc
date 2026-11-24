@@ -111,3 +111,9 @@ This is discovery only: the harness does not size BARs by writing all-ones, chan
 ## MMIO page attributes
 
 The 32-bit page-table builder now preserves the x86 PWT and PCD leaf-entry flags in addition to write and user permissions. This provides the page-table primitive needed to map device MMIO with cache-control attributes; a native unit test maps a representative APIC page with both flags and verifies the translated physical address and flags. It does not yet establish a complete PAT/MTRR memory-type policy, map firmware-discovered BARs, or enable paging.
+
+## Staged local APIC and I/O APIC driver
+
+`pc_apic.c/.h` now provides a staged xAPIC backend: it enables the BSP local APIC through IA32_APIC_BASE, masks local LVT sources, attaches caller-mapped I/O APIC windows using MADT GSI bases, routes a GSI with ACPI polarity/trigger flags, and issues local-APIC EOI. The LAPIC physical address and mapped virtual address are separate parameters; the caller must establish uncached MMIO mappings before calling these routines. x2APIC mode is rejected rather than mis-handled.
+
+This driver is compiled into the harness, but is intentionally not activated by `kernel_main`: firmware MADT table discovery, MMIO mapping/cache policy, APIC-vs-PIC selection, IDT vector ownership, and an IRQ dispatch path that sends LAPIC EOI still need integration. The existing PIT self-test continues using the legacy PIC. No claim of APIC hardware testing is made.
