@@ -27,9 +27,13 @@ HalpSetupPCIDevices(
     VOID
     )
 {
-#ifdef PC_COMPAT_GUEST
-    /* Host PCI is enumerated and virtualized by the PC monitor. The Xbox
-       MCPX/LPC/IDE/NIC/USB/audio/AGP register map must never touch host PCI. */
+#if defined(PC_COMPAT_GUEST) || defined(PC_COMPAT_NATIVE)
+    /*
+     * A PC's PCI topology and BAR assignments come from firmware/PCI
+     * enumeration. Never replay Xbox MCPX/LPC/IDE/NIC/USB/audio/AGP BDFs
+     * or fixed register values against an unrelated host PCI hierarchy.
+     * HalReadWritePCISpace remains the generic PCI config-space interface.
+     */
     return;
 #else
 
