@@ -5,6 +5,7 @@ typedef struct __attribute__((packed)) { uint16_t limit; uint32_t base; } PcIdtr
 static PcIdtGate g_idt[256];
 extern uint32_t PcIsrStubTable[];
 extern uint32_t PcIrqStubTable[];
+extern void PcApicSpuriousStub(void);
 static uint8_t PcSerialIn(uint16_t port) {
     uint8_t value;
     __asm__ volatile ("inb %1, %0" : "=a"(value) : "Nd"(port));
@@ -33,6 +34,8 @@ void PcIdtInstallExceptions(void) {
     for(i=0;i<256u;++i) { g_idt[i].offset_low=0; g_idt[i].selector=0; g_idt[i].zero=0; g_idt[i].type_attr=0; g_idt[i].offset_high=0; }
     for(i=0;i<32u;++i) PcIdtSetGate(i,(uintptr_t)PcIsrStubTable[i]);
     for(i=0;i<16u;++i) PcIdtSetGate(0x30u+i,(uintptr_t)PcIrqStubTable[i]);
+    /* The local APIC spurious vector must always have a valid IDT gate. */
+    PcIdtSetGate(0xffu,(uintptr_t)PcApicSpuriousStub);
     idtr.limit=(uint16_t)(sizeof(g_idt)-1u); idtr.base=(uint32_t)(uintptr_t)g_idt;
     __asm__ volatile ("lidt %0" : : "m"(idtr) : "memory");
 }
