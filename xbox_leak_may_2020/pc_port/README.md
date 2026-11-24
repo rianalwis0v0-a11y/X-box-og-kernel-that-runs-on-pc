@@ -39,6 +39,12 @@ This remains a loader milestone, not a kernel launch. The page-table builder is 
 
 This is a native hardware path, not a VMCALL adapter. It is currently a separately compiled porting module: it has **not** yet replaced the Xbox HAL's initialization call sites or been built with the original Xbox NT DDK toolchain. The PCI config path is only the legacy mechanism #1 256-byte configuration space; ACPI, APIC routing, timer calibration, DMA, storage, and interrupt dispatch remain to be implemented and integrated. The module must run only at ring 0 with a valid x86 environment.
 
+## Native PC HAL ABI backend
+
+The freestanding harness now instantiates and validates the version-1 `pc_hal_ops` contract at kernel startup. Its native backend provides PCI device lookup and 32-bit configuration-space reads/writes through the ring-0 CF8/CFC path, plus a legacy PIC/PIT IRQ0 callback, IRQ0 mask control, and a PIT-derived monotonic clock/sleep service. The QEMU boot workflow asserts that the HAL ABI contract validates during startup.
+
+MMIO mapping deliberately returns `PC_STATUS_UNSUPPORTED`: the page-table builder can construct cache-disabled mappings, but the kernel has not yet installed a general MMIO mapper or activated paging. The current interrupt backend is legacy PIC/PIT only; it does not claim general GSI/APIC routing. This is a real, limited native backend rather than the test-only callback stubs, but it is not yet a complete Xbox HAL implementation.
+
 ## Critical limitation
 
 This proves only the standalone native PC harness and its early hardware probes. It does **not** load or boot the original Xbox kernel. The Xbox kernel still needs a verified PE32 loader/relocation/import path, its exact boot handoff, native replacement implementations for Xbox-specific HAL services, and integration of the NV2A translation layer. The existing `PC_COMPAT_GUEST` VMCALL adapter is a separate hypervisor-guest experiment; it is not used by this bare-metal harness.
