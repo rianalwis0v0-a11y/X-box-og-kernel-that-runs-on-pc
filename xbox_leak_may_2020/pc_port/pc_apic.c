@@ -61,7 +61,8 @@ int PcApicMaskAllIoApics(pc_apic_mmio *m){
 int PcApicRouteGsi(pc_apic_mmio *m,uint32_t gsi,uint8_t vector,uint16_t flags,int masked){
  if(!m||!m->local_apic||vector<0x20u||m->ioapic_count>PC_ACPI_MAX_IOAPICS)return 0;
  uint32_t pol=flags&3u,trig=(flags>>2)&3u;if(pol==2u||trig==2u)return 0;
- if(!pol)pol=1u;if(!trig)trig=1u; /* ACPI conforming ISA defaults: high/edge */
+ if(!pol) pol=1u;
+ if(!trig) trig=1u; /* ACPI conforming ISA defaults: high/edge */
  uint32_t dest=lr(m->local_apic,LAPIC_ID)&0xff000000u;
  for(uint32_t i=0;i<m->ioapic_count;++i){
   volatile uint32_t *io=m->ioapic[i];if(!io||gsi<m->ioapic_gsi_base[i])continue;
