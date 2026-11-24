@@ -520,29 +520,44 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
                                             &alias_pa, &page_flags) &&
                         alias_pa == 0x00123456u &&
                         page_flags == PC_PAGING_WRITE) {
-                        serial_write("PC-HAL: Xbox 256 MiB identity + 0x80000000 alias tables verified (paging OFF)\\n");
+                        serial_write("PC-HAL: Xbox 256 MiB identity + 0x80000000 alias tables verified (paging OFF)\n");
                         if (apic_map_ok && firmware_madt_valid) {
-                            uint32_t apic_pa, apic_flags;
-                            if (pc_paging_translate(&xbox_page_tables,
+                            uint32_t apic_pa, apic_flags, apic_index;
+                            int mappings_valid =
+                                pc_paging_translate(&xbox_page_tables,
                                     firmware_madt.local_apic_address,
                                     &apic_pa, &apic_flags) &&
                                 apic_pa == firmware_madt.local_apic_address &&
                                 apic_flags == (PC_PAGING_WRITE |
-                                               PC_PAGING_PWT | PC_PAGING_PCD)) {
+                                               PC_PAGING_PWT | PC_PAGING_PCD);
+                            for (apic_index = 0;
+                                 mappings_valid &&
+                                 apic_index < firmware_madt.ioapic_count;
+                                 ++apic_index) {
+                                uint32_t address =
+                                    firmware_madt.ioapics[apic_index].address;
+                                mappings_valid =
+                                    pc_paging_translate(&xbox_page_tables,
+                                        address, &apic_pa, &apic_flags) &&
+                                    apic_pa == address &&
+                                    apic_flags == (PC_PAGING_WRITE |
+                                                   PC_PAGING_PWT | PC_PAGING_PCD);
+                            }
+                            if (mappings_valid) {
                                 serial_write("PC-HAL: firmware LAPIC/IOAPIC MMIO mappings prepared uncached (paging OFF)\\n");
                             } else {
                                 serial_write("PC-HAL: APIC MMIO mapping verification ERROR\\n");
                             }
                         } else if (firmware_madt_valid) {
-                            serial_write("PC-HAL: APIC MMIO mapping preparation ERROR\\n");
+                            serial_write("PC-HAL: APIC MMIO mapping preparation ERROR\n");
                         } else {
-                            serial_write("PC-HAL: no MADT; APIC MMIO mappings skipped\\n");
+                            serial_write("PC-HAL: no MADT; APIC MMIO mappings skipped\n");
                         }
                     } else {
-                        serial_write("PC-HAL: Xbox page-table translation self-test ERROR\\n");
+                        serial_write("PC-HAL: Xbox page-table translation self-test ERROR\n");
                     }
                 } else {
-                    serial_write("PC-HAL: Xbox page-table layout build ERROR\\n");
+                    serial_write("PC-HAL: Xbox page-table layout build ERROR\n");
                 }
             }
         } else {
