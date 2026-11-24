@@ -36,6 +36,35 @@ The Xbox source also changes the APIC-base MSR and programs the legacy 8259 PIC.
 A PC port must not blindly replay that sequence: modern firmware may require the local
 APIC and IOAPIC, and the ACPI MADT describes the interrupt topology.
 
+## Native NT x86 HAL wiring (PC_COMPAT_NATIVE)
+
+The Xbox HAL source already contains the reusable NT x86 hardware layer; the
+platform-specific additions are concentrated in the Xbox initialization and
+fixed MCPX/LPC device setup. A separate `PC_COMPAT_NATIVE=1` build selection
+now routes the Xbox HAL through that existing native x86 path:
+
+- `xxhal.c`: Phase 0 initializes the existing 8259 PIC, CMOS RTC and 8254
+  PIT clock routines directly. It does not execute the Xbox LPC hardware
+  monitor pulse, force-disable the processor APIC, configure Xbox southbridge
+  devices, or initialize the Xbox SCI/SMC path.
+- `xxhal.c`: Phase 1 installs the NT clock ISR on the existing
+  `CLOCK_VECTOR` and enables only that legacy clock interrupt. Xbox profile,
+  SMBus, SMC and SCI interrupt registrations are omitted.
+- `pcisetup.c`: fixed Xbox MCPX/LPC/IDE/NIC/USB/audio/AGP programming is
+  skipped. The existing `HalReadWritePCISpace` implementation remains the
+  generic PCI configuration-space interface.
+- `sources`: `PC_COMPAT_NATIVE=1` selects this path; it is mutually
+  exclusive with the older `PC_COMPAT_GUEST=1` monitor/VMCALL experiment.
+
+This is source-level integration of the NT x86 HAL hardware routines, not a
+binary copy of a desktop `hal.dll`. It is intentionally a legacy-PIC
+compatibility milestone: MADT-driven LAPIC/IOAPIC routing, APIC EOI/IRQL
+integration, safe MMIO mapping, and a full PC timer policy still must be
+connected before this mode is safe on APIC-only/x2APIC-only systems. The
+original Xbox kernel's own boot animation and graphics initialization were
+not changed by this work. The native NT DDK build and actual Xbox-kernel boot
+have not yet been validated by the standalone QEMU harness.
+
 ## Current PC implementation coverage
 
 The standalone `pc_port` currently provides:
