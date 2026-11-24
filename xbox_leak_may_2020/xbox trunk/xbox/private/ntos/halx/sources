@@ -68,5 +68,8 @@ i386_SOURCES=i386\ixclock.asm  \
              i386\smbussci.c   \
              i386\superio.asm  \
              i386\xxhal.c      \
-             i386\xxioacc.asm \
-             ..\..\..\..\..\pc_port\pc_hal_guest.c
+             i386\xxioacc.asm
+
+!IF "$(PC_COMPAT_GUEST)" == "1"
+i386_SOURCES=$(i386_SOURCES) ..\..\..\..\..\pc_port\pc_hal_guest.c
+!ENDIF
