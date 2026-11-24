@@ -65,3 +65,10 @@ The Linux i915 driver is GPL-2.0. The Xbox source tree contains Microsoft-origin
 ### Current status
 
 The existing Intel module still performs PCI discovery/classification only. No i915 code has been copied, no Intel BAR is mapped, no GT is initialized, and no rendering/display test has been performed. The UHD 610 backend is not yet implemented.
+
+
+## First Gen9.5 backend code milestone
+
+Added `pc_intel_gen9.h/.c` as a deliberately narrow backend boundary. It accepts only discovered Intel VGA devices classified as Gen9, requires a caller-supplied mapping of at least 4 KiB, and provides aligned, bounds-checked 32-bit MMIO reads. The module performs no PCI writes, no BAR mapping, no GT power changes, no forcewake writes, and no command submission. Unit tests use a fake memory array to validate the access boundary and reject other GPU generations.
+
+This is not yet a hardware probe: no real mapping is supplied by the current HAL, whose `map_mmio` callback remains unsupported. The next prerequisite is a real page-table/MMIO mapping lifecycle and a validated BAR aperture size; only after that can a hardware read-only probe be enabled. Gen9 GT registers may require forcewake/power-domain sequencing, as documented by Intel and handled by i915; the caller must not read those registers before that sequence is implemented.
