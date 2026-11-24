@@ -283,6 +283,33 @@ static int initialize_physical_allocator(const multiboot_info_min *info,
     return 0;
 }
 
+static void pc_irq_count_handler(void *context)
+{
+    volatile uint32_t *count = (volatile uint32_t *)context;
+    ++*count;
+}
+
+static int test_legacy_irq_routes(void)
+{
+    volatile uint32_t keyboard_count = 0;
+    volatile uint32_t slave_count = 0;
+    uint32_t frame[9] = {0};
+    if (!PcIrqRegisterHandler(1u, 0u, pc_irq_count_handler,
+                              (void *)&keyboard_count) ||
+        !PcIrqRegisterHandler(12u, 0u, pc_irq_count_handler,
+                              (void *)&slave_count))
+        return 0;
+
+    /* Exercise the same vector dispatch and EOI path used by real IRQ stubs. */
+    frame[8] = 0x31u;
+    PcIrqDispatch(frame);
+    frame[8] = 0x3cu;
+    PcIrqDispatch(frame);
+    PcIrqMask(1u, 1);
+    PcIrqMask(12u, 1);
+    return keyboard_count == 1u && slave_count == 1u;
+}
+
 static void report_pci(void) {
     uint32_t found = 0;
     uint32_t nv2a = 0;
@@ -468,6 +495,12 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
     serial_write("PC-HAL: PIT IRQ0 self-test PASS ticks=");
     serial_hex(PcIrqTicks());
     serial_write("\n");
+    if (test_legacy_irq_routes()) {
+        serial_write("PC-HAL: legacy PIC IRQ1 + IRQ12 dispatch/EOI self-test PASS\n");
+    } else {
+        serial_write("PC-HAL: legacy PIC IRQ routing self-test ERROR\n");
+        for (;;) __asm__ volatile ("cli; hlt");
+    }
     serial_write("PC-HARNESS: native PC HAL probe PASS\n");
     {
         xbox_pc_kernel_image image;
