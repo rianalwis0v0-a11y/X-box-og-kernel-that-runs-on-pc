@@ -112,3 +112,11 @@ PcIrqCommon:
     popal
     addl $8, %esp
     iret
+
+/* Local-APIC spurious interrupts do not carry an error code and need no EOI. */
+.global PcApicSpuriousStub
+PcApicSpuriousStub:
+    cld
+    pushal
+    popal
+    iret
