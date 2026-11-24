@@ -115,3 +115,11 @@ jobs:
           grep -F "XBOX-BOOT: xboxkrnl.exe module not supplied" qemu.log
           grep -F "PC-HARNESS: stopping before Xbox kernel execution" qemu.log
           test "$status" -eq 124
+
+      - name: Upload bootable PC HAL ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: pc-port-harness-iso
+          path: xbox_leak_may_2020/pc_port/pc-port-harness.iso
+          if-no-files-found: error
+          retention-days: 14
