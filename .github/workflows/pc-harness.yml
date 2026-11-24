@@ -109,6 +109,7 @@ jobs:
           grep -F "PC-HAL: PCI functions found=" qemu.log
           grep -F "PC-HAL: physical allocator PASS page=" qemu.log
           grep -F "PC-HAL: Xbox 256 MiB identity + 0x80000000 alias tables verified (paging OFF)" qemu.log
+          grep -F "PC-HAL: firmware LAPIC/IOAPIC MMIO mappings prepared uncached (paging OFF)" qemu.log
           grep -F "PC-HAL: physical allocator PASS page=" qemu.log
           grep -F "PC-HAL: PIT IRQ0 self-test PASS ticks=" qemu.log
           grep -F "PC-HAL: legacy PIC IRQ1 + IRQ12 dispatch/EOI self-test PASS" qemu.log
