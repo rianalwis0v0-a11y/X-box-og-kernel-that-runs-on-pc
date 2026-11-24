@@ -131,3 +131,17 @@ The driver now checks CPUID APIC capability before enabling the local APIC, prov
 The early PC harness now walks the firmware RSDT (or XSDT when its address is representable in the 32-bit port), validates the root SDT checksum and entry layout, locates an APIC/MADT table, and reports the local-APIC address, I/O APIC addresses/GSI bases, and interrupt-source-override count over serial. The root walker has an injectable physical-memory mapper and unit coverage for successful RSDT-to-MADT discovery and checksum rejection. The boot harness uses a conservative identity-mapped 32-bit physical reader while paging is disabled.
 
 Discovery is not activation: the harness still does not map APIC MMIO with a proven uncached memory type, select APIC mode, route the PIT through an I/O APIC, or switch the IRQ dispatcher to local-APIC EOI. APIC hardware remains disabled. A separate GitHub Actions job now compiles the 32-bit freestanding harness in addition to the ACPI parser sanitizer tests.
+
+
+## XboxRuntime NV2A code reuse: freestanding shader validation
+
+The freestanding `nv2a_vertex_shader.c/.h` port is derived from the MIT-licensed
+`modules/nv2a/nv2a_vertex_shader.c/.h` in XboxRuntime. It validates NV2A
+four-DWORD vertex microcode and extracts input/output/constant-register usage.
+The code has no Win32, D3D, heap, or host-process dependency and is compiled
+into the ring-0 harness. Startup runs a terminated-NOP microcode self-test.
+
+This is deliberately only the portable validation/metadata stage. It is not
+the XboxRuntime D3D11 HLSL compiler, does not execute shaders, and does not
+submit work to a physical GPU. The full XboxRuntime bridge currently depends
+on Windows/D3D8/D3D11 and cannot be copied wholesale into a bare-metal kernel.
