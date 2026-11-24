@@ -15,11 +15,11 @@ static uint32_t lr(const volatile uint32_t *b,uint32_t r){return b[r/4u];}
 static void lw(volatile uint32_t *b,uint32_t r,uint32_t v){b[r/4u]=v;(void)b[LAPIC_ID/4u];}
 static uint32_t ir(volatile uint32_t *b,uint8_t r){b[IOREGSEL/4u]=r;return b[IOWIN/4u];}
 static void iw(volatile uint32_t *b,uint8_t r,uint32_t v){b[IOREGSEL/4u]=r;b[IOWIN/4u]=v;}
-int PcApicEnableLocal(pc_apic_mmio *m,uint32_t va){
- if(!m||!va||(va&0xfffu))return 0;
+int PcApicEnableLocal(pc_apic_mmio *m,uint32_t physical,uint32_t va){
+ if(!m||!physical||!va||(physical&0xfffu)||(va&0xfffu))return 0;
  uint64_t base=rdmsr(APIC_BASE_MSR);
  if(base&(1ull<<10))return 0; /* x2APIC is deliberately unsupported */
- base=(base&~0xfffff000ull)|(uint64_t)va|(1ull<<11);wrmsr(APIC_BASE_MSR,base);
+ base=(base&~0xfffff000ull)|(uint64_t)physical|(1ull<<11);wrmsr(APIC_BASE_MSR,base);
  volatile uint32_t *b=(volatile uint32_t *)(uintptr_t)va;m->local_apic=b;
  lw(b,LAPIC_TPR,0); 
  /* Mask all local LVT sources before enabling the software APIC. */
