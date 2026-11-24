@@ -1,0 +1,36 @@
+name: PC port ACPI parser tests
+
+on:
+  push:
+    paths:
+      - "xbox_leak_may_2020/pc_port/pc_acpi.c"
+      - "xbox_leak_may_2020/pc_port/pc_acpi.h"
+      - "xbox_leak_may_2020/pc_port/test_pc_acpi.c"
+      - ".github/workflows/pc-port-acpi.yml"
+  pull_request:
+    paths:
+      - "xbox_leak_may_2020/pc_port/pc_acpi.c"
+      - "xbox_leak_may_2020/pc_port/pc_acpi.h"
+      - "xbox_leak_may_2020/pc_port/test_pc_acpi.c"
+      - ".github/workflows/pc-port-acpi.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  acpi-parser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build ACPI parser tests with warnings and sanitizers
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            -fsanitize=address,undefined -fno-omit-frame-pointer \
+            xbox_leak_may_2020/pc_port/pc_acpi.c \
+            xbox_leak_may_2020/pc_port/test_pc_acpi.c \
+            -o /tmp/test_pc_acpi
+
+      - name: Run ACPI parser tests
+        run: /tmp/test_pc_acpi
