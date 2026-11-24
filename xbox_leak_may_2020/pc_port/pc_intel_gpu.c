@@ -34,7 +34,7 @@ pc_intel_gpu_generation PcIntelGpuClassifyDevice(uint16_t id)
     case 0x5916: case 0x3e92: case 0x3e9b:
         return PC_INTEL_GEN9;
     /* Gen9.5 / UHD 610 commonly 3E91; keep family in Gen9 bucket. */
-    case 0x3e91: case 0x3e90: case 0x9bc8: case 0x9ba8:
+    case 0x3e91: case 0x3e90: case 0x3ea1: case 0x9bc8: case 0x9ba8:
         return PC_INTEL_GEN9;
     /* Gen11 / Ice Lake */
     case 0x8a52: case 0x8a5a: case 0x8a56:
