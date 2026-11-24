@@ -54,7 +54,7 @@ jobs:
       - name: Install toolchain and emulator
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-multilib g++-multilib grub-common grub-pc-bin qemu-system-x86
+          sudo apt-get install -y gcc-multilib g++-multilib grub-common grub-pc-bin xorriso qemu-system-x86
       - name: Compile freestanding XboxRuntime XBE parser for 32-bit target
         run: g++ -m32 -std=c++17 -ffreestanding -fno-exceptions -fno-rtti -fno-builtin -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port -fsyntax-only xbox_leak_may_2020/pc_port/xbe_format.cpp
       - name: Test 32-bit x86 page-table builder
@@ -81,16 +81,18 @@ jobs:
         run: gcc -m32 -std=c11 -Wall -Wextra -Werror -DPC_COMPAT_GUEST -Ixbox_leak_may_2020/pc_port -fsyntax-only xbox_leak_may_2020/pc_port/pc_hal_guest.c
       - name: Build standalone 32-bit harness
         working-directory: xbox_leak_may_2020/pc_port
-        run: make CROSS=
+        run: make CROSS= pc-harness.elf pc-port-harness.iso
       - name: Validate Multiboot header
         working-directory: xbox_leak_may_2020/pc_port
         run: grub-file --is-x86-multiboot pc-harness.elf
-      - name: Boot in QEMU and verify serial diagnostics
+      - name: Boot the generated ISO in QEMU and verify serial diagnostics
         working-directory: xbox_leak_may_2020/pc_port
         shell: bash
         run: |
+          test -s pc-port-harness.iso
+          file pc-port-harness.iso
           set +e
-          timeout 20s qemu-system-i386 -kernel pc-harness.elf -display none -serial stdio -monitor none -no-reboot -no-shutdown > qemu.log 2>&1
+          timeout 20s qemu-system-i386 -cdrom pc-port-harness.iso -boot d -display none -serial stdio -monitor none -no-reboot -no-shutdown > qemu.log 2>&1
           status=$?
           set -e
           cat qemu.log
