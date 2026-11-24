@@ -19,6 +19,12 @@ Abstract:
 #include "pc_hal_guest.h"
 #endif
 
+/*
+ * PC_COMPAT_NATIVE reuses the x86 NT HAL's real ring-0 PIC, CMOS RTC and
+ * PIT clock routines. It is deliberately separate from PC_COMPAT_GUEST:
+ * no VMCALL monitor or shared-memory transport is involved.
+ */
+
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text(INIT, HalInitSystemPhase0)
 #endif
@@ -52,6 +58,21 @@ Return Value:
     if (!PcHalInitializePlatform()) {
         KeBugCheck(0x50434841); /* PC HAL handshake failed */
     }
+#elif defined(PC_COMPAT_NATIVE)
+    /*
+     * Native legacy-PC path: keep the Xbox NT HAL's x86 hardware routines,
+     * but do not touch Xbox LPC/MCPX registers or force-disable the PC APIC.
+     * HalpInitializePICs uses the existing 0x30/0x38 NT vector convention;
+     * the clock implementation is the standard 8254 PIT channel-0 path.
+     *
+     * This mode is for firmware exposing legacy PIC compatibility only.
+     * Full MADT IOAPIC/LAPIC routing is a separate required integration
+     * before enabling this mode on APIC-only or x2APIC-only machines.
+     */
+    HalpInitializePICs();
+    HalpInitializeRealTimeClock();
+    HalpInitializeClock();
+    HalStopProfileInterrupt(0);
 #else
     ULONGLONG ApicBits;
 
@@ -144,6 +165,8 @@ Return Value:
     if (!PcHalInitializePlatform()) {
         KeBugCheck(0x50434841);
     }
+#elif defined(PC_COMPAT_NATIVE)
+    HalpInitializePICs();
 #else
     HalPulseHardwareMonitorPin();
     HalpInitializePICs();
@@ -178,6 +201,13 @@ Return Value:
         KeBugCheck(0x50434952); /* PC interrupt registration failed */
     }
     /* Xbox-only SMC/SMBus/SCI interrupts are intentionally not registered. */
+#elif defined(PC_COMPAT_NATIVE)
+    /*
+     * Install the normal NT clock ISR on the legacy PC timer vector.
+     * Do not register Xbox SMC/SMBus/SCI sources or the Xbox profile source.
+     */
+    KiSetHandlerAddressToIDT(CLOCK_VECTOR, KeClockInterrupt);
+    HalEnableSystemInterrupt(CLOCK_VECTOR - PRIMARY_VECTOR_BASE, Latched);
 #else
 
     //
@@ -237,7 +267,7 @@ Return Value:
 
 --*/
 {
-#ifdef PC_COMPAT_GUEST
+#if defined(PC_COMPAT_GUEST) || defined(PC_COMPAT_NATIVE)
     /* No Xbox LPC hardware-monitor pin exists on a standard PC. */
 #else
     if (!KeHasQuickBooted &&
