@@ -19,6 +19,43 @@ static void put32(uint8_t *p, uint32_t v)
     p[2]=(uint8_t)(v>>16); p[3]=(uint8_t)(v>>24);
 }
 
+
+#define TEST_PHYS_BASE 0x1000u
+#define TEST_PHYS_SIZE 0x4000u
+static uint8_t test_physical_memory[TEST_PHYS_SIZE];
+static int test_map_physical(void *context, uint32_t address,
+                             size_t minimum_bytes, const void **out)
+{
+    uint32_t offset;
+    (void)context;
+    if (!out || address < TEST_PHYS_BASE) return 0;
+    offset = address - TEST_PHYS_BASE;
+    if (offset > TEST_PHYS_SIZE || minimum_bytes > TEST_PHYS_SIZE - offset)
+        return 0;
+    *out = test_physical_memory + offset;
+    return 1;
+}
+static void test_root_madt_walk(void)
+{
+    pc_acpi_rsdp_info rsdp = {0};
+    pc_acpi_madt_info out;
+    uint8_t *rsdt = test_physical_memory + (0x1100u - TEST_PHYS_BASE);
+    uint8_t *madt = test_physical_memory + (0x1200u - TEST_PHYS_BASE);
+    for (uint32_t i=0;i<TEST_PHYS_SIZE;++i) test_physical_memory[i]=0;
+    rsdt[0]='R';rsdt[1]='S';rsdt[2]='D';rsdt[3]='T';
+    put32(rsdt+4,40u);put32(rsdt+36,0x1200u);checksum(rsdt,40u,9u);
+    madt[0]='A';madt[1]='P';madt[2]='I';madt[3]='C';
+    put32(madt+4,44u);put32(madt+36,0xfee00000u);put32(madt+40,1u);
+    checksum(madt,44u,9u);
+    rsdp.revision=0;rsdp.rsdt_address=0x1100u;
+    assert(PcAcpiFindMadtMapped(&rsdp,test_map_physical,0,&out));
+    assert(out.local_apic_address==0xfee00000u);
+    assert(out.ioapic_count==0u);
+    /* An invalid root checksum must fail closed. */
+    rsdt[9]^=1u;
+    assert(!PcAcpiFindMadtMapped(&rsdp,test_map_physical,0,&out));
+}
+
 static void test_rsdp_v1(void)
 {
     uint8_t rsdp[20] = {'R','S','D',' ','P','T','R',' '};
@@ -92,6 +129,7 @@ int main(void)
     test_rsdp_v1();
     test_rsdp_scan();
     test_madt();
+    test_root_madt_walk();
     test_sdt_bounds();
     puts("ACPI RSDP/SDT/MADT parser tests passed");
     return 0;
