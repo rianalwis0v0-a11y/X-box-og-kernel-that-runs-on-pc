@@ -24,7 +24,7 @@ static void lw(volatile uint32_t *b,uint32_t r,uint32_t v){b[r/4u]=v;(void)b[LAP
 static uint32_t ir(volatile uint32_t *b,uint8_t r){b[IOREGSEL/4u]=r;return b[IOWIN/4u];}
 static void iw(volatile uint32_t *b,uint8_t r,uint32_t v){b[IOREGSEL/4u]=r;b[IOWIN/4u]=v;}
 int PcApicEnableLocal(pc_apic_mmio *m,uint32_t physical,uint32_t va){
- if(!m||!physical||!va||(physical&0xfffu)||(va&0xfffu))return 0;
+ if(!m||!PcApicSupported()||!physical||!va||(physical&0xfffu)||(va&0xfffu))return 0;
  uint64_t base=rdmsr(APIC_BASE_MSR);
  if(base&(1ull<<10))return 0; /* x2APIC is deliberately unsupported */
  base=(base&~0xfffff000ull)|(uint64_t)physical|(1ull<<11);wrmsr(APIC_BASE_MSR,base);
@@ -41,6 +41,8 @@ int PcApicAttachIoApics(pc_apic_mmio *m,const pc_acpi_madt_info *a,const uint32_
  for(uint32_t i=0;i<a->ioapic_count;++i){m->ioapic[i]=(volatile uint32_t *)(uintptr_t)va[i];m->ioapic_gsi_base[i]=a->ioapics[i].gsi_base;}
  m->ioapic_count=a->ioapic_count;
  for(uint32_t i=a->ioapic_count;i<PC_ACPI_MAX_IOAPICS;++i){m->ioapic[i]=0;m->ioapic_gsi_base[i]=0;}
+ /* Never inherit firmware redirections: mask every pin before routing. */
+ if(!PcApicMaskAllIoApics(m)){m->ioapic_count=0;return 0;}
  return 1;
 }
 int PcApicMaskAllIoApics(pc_apic_mmio *m){
