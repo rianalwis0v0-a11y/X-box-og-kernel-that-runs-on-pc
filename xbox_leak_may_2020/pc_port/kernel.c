@@ -392,11 +392,11 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
             shader_info.output_mask == 0u) {
             serial_write("NV2A: XboxRuntime freestanding microcode validator PASS\n");
         } else {
-            serial_write("NV2A: microcode validator self-test ERROR\\n");
+            serial_write("NV2A: microcode validator self-test ERROR\n");
             for (;;) __asm__ volatile ("cli; hlt");
         }
     }
-    serial_write("PC-HARNESS: entered 32-bit bare-metal kernel\\n");
+    serial_write("PC-HARNESS: entered 32-bit bare-metal kernel\n");
     if (multiboot_magic != MULTIBOOT_BOOTLOADER_MAGIC || !info) {
         serial_write("PC-HARNESS: ERROR invalid Multiboot handoff\n");
         for (;;) __asm__ volatile ("cli; hlt");
