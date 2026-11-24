@@ -117,3 +117,9 @@ The 32-bit page-table builder now preserves the x86 PWT and PCD leaf-entry flags
 `pc_apic.c/.h` now provides a staged xAPIC backend: it enables the BSP local APIC through IA32_APIC_BASE, masks local LVT sources, attaches caller-mapped I/O APIC windows using MADT GSI bases, routes a GSI with ACPI polarity/trigger flags, and issues local-APIC EOI. The LAPIC physical address and mapped virtual address are separate parameters; the caller must establish uncached MMIO mappings before calling these routines. x2APIC mode is rejected rather than mis-handled.
 
 This driver is compiled into the harness, but is intentionally not activated by `kernel_main`: firmware MADT table discovery, MMIO mapping/cache policy, APIC-vs-PIC selection, IDT vector ownership, and an IRQ dispatch path that sends LAPIC EOI still need integration. The existing PIT self-test continues using the legacy PIC. No claim of APIC hardware testing is made.
+
+## Firmware ACPI root-table discovery
+
+The early PC harness now walks the firmware RSDT (or XSDT when its address is representable in the 32-bit port), validates the root SDT checksum and entry layout, locates an APIC/MADT table, and reports the local-APIC address, I/O APIC addresses/GSI bases, and interrupt-source-override count over serial. The root walker has an injectable physical-memory mapper and unit coverage for successful RSDT-to-MADT discovery and checksum rejection. The boot harness uses a conservative identity-mapped 32-bit physical reader while paging is disabled.
+
+Discovery is not activation: the harness still does not map APIC MMIO with a proven uncached memory type, select APIC mode, route the PIT through an I/O APIC, or switch the IRQ dispatcher to local-APIC EOI. APIC hardware remains disabled. A separate GitHub Actions job now compiles the 32-bit freestanding harness in addition to the ACPI parser sanitizer tests.
