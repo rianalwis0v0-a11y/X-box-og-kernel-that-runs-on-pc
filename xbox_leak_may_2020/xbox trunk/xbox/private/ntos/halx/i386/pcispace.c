@@ -339,10 +339,19 @@ Return Value:
     CfgBits.u.bits.Enable = 1;
 
     //
-    // Synchronize access to PCI configuration space by disabling interrupts.
+    // Serialize the address/data pair against local interrupt handlers.
+    // Preserve the caller's IF state: this routine can run with interrupts
+    // already disabled during early HAL initialization or at elevated IRQL.
     //
 
-    _disable();
+    ULONG OldEFlags;
+
+    __asm {
+        pushfd
+        pop     eax
+        mov     OldEFlags, eax
+        cli
+    }
 
 #if DBG
     //
@@ -380,9 +389,11 @@ Return Value:
     }
 
     //
-    // Reenable interrupts now that we're finished accessing PCI configuration
-    // space.
+    // Restore only the IF bit changed above. Do not enable interrupts if
+    // the caller entered with IF clear.
     //
 
-    _enable();
+    if (OldEFlags & 0x00000200) {
+        _enable();
+    }
 }
