@@ -189,6 +189,31 @@ static void report_acpi(void)
     serial_write(" XSDT-lo=");
     serial_hex((uint32_t)rsdp.xsdt_address);
     serial_write("\n");
+
+    {
+        pc_acpi_madt_info madt;
+        if (PcAcpiFindMadt(&rsdp, &madt)) {
+            uint32_t i;
+            serial_write("PC-ACPI: MADT parsed; LAPIC physical=");
+            serial_hex(madt.local_apic_address);
+            serial_write(" IOAPIC count=");
+            serial_hex(madt.ioapic_count);
+            serial_write(" ISO count=");
+            serial_hex(madt.iso_count);
+            serial_write("\n");
+            for (i = 0; i < madt.ioapic_count; ++i) {
+                serial_write("PC-ACPI: IOAPIC id=");
+                serial_hex(madt.ioapics[i].id);
+                serial_write(" address=");
+                serial_hex(madt.ioapics[i].address);
+                serial_write(" GSI base=");
+                serial_hex(madt.ioapics[i].gsi_base);
+                serial_write("\n");
+            }
+        } else {
+            serial_write("PC-ACPI: MADT not found or not safely addressable; APIC remains disabled\n");
+        }
+    }
 }
 
 static void report_memory(const multiboot_info_min *info) {
