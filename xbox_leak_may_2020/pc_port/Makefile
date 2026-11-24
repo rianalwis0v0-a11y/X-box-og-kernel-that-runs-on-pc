@@ -15,7 +15,7 @@ check-tools:
 boot.o: boot.S | check-tools
 	$(AS) $(CFLAGS) -c $< -o $@
 
-kernel.o: kernel.c xbox_pc_boot.h pc_idt.h pc_gdt.h pc_irq.h pc_paging.h pc_physmem.h pc_hal_native.h pc_hal_native_backend.h include/pc_hal.h pc_pci.h pc_acpi.h | check-tools
+kernel.o: kernel.c xbox_pc_boot.h pc_idt.h pc_gdt.h pc_irq.h pc_paging.h pc_physmem.h pc_hal_native.h pc_hal_native_backend.h include/pc_hal.h pc_pci.h pc_intel_gpu.h pc_acpi.h | check-tools
 	$(CC) $(CFLAGS) -c $< -o $@
 
 pc_paging.o: pc_paging.c pc_paging.h | check-tools
