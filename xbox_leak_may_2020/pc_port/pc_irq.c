@@ -37,7 +37,7 @@ void PcIrqInstallPit(uint32_t frequency_hz)
     PcHalNativeOut8(PIT_CH0, (uint8_t)(divisor & 0xffu));
     PcHalNativeOut8(PIT_CH0, (uint8_t)((divisor >> 8) & 0xffu));
     g_ticks = 0;
-    g_tick_period_ns = 1000000000u / frequency_hz;
+    g_tick_period_ns = 1000000000u / (PIT_INPUT_HZ / divisor);
     g_irq0_handler = 0;
     g_irq0_context = 0;
 
@@ -69,7 +69,10 @@ uint64_t PcIrqMonotonicTimeNs(void)
 int PcIrqSleepNs(uint64_t duration_ns)
 {
     uint64_t start;
+    uint32_t flags;
     if (!g_tick_period_ns) return 0;
+    __asm__ volatile ("pushfl; popl %0" : "=r"(flags));
+    if (!(flags & 0x200u)) return 0;
     start = PcIrqMonotonicTimeNs();
     while (PcIrqMonotonicTimeNs() - start < duration_ns)
         __asm__ volatile ("hlt" ::: "memory");
@@ -80,10 +83,13 @@ int PcIrqRegisterHandler(uint32_t gsi, uint32_t trigger,
                          void (*handler)(void *), void *context)
 {
     if (gsi != 0u || trigger != 0u || !handler) return 0;
-    PcHalNativeDisableInterrupts();
-    g_irq0_context = context;
-    g_irq0_handler = handler;
-    PcHalNativeEnableInterrupts();
+    {
+        uint32_t flags;
+        __asm__ volatile ("pushfl; popl %0; cli" : "=r"(flags) :: "memory");
+        g_irq0_context = context;
+        g_irq0_handler = handler;
+        if (flags & 0x200u) PcHalNativeEnableInterrupts();
+    }
     return 1;
 }
 
@@ -102,6 +108,9 @@ void PcIrqStop(void)
     g_pic_master_mask = 0xffu;
     PcHalNativeOut8(PIC1_DATA, g_pic_master_mask);
     PcHalNativeOut8(PIC2_DATA, 0xffu);
+    g_tick_period_ns = 0u;
+    g_irq0_handler = 0;
+    g_irq0_context = 0;
 }
 
 void PcIrqDispatch(const uint32_t *r)
