@@ -9,6 +9,7 @@
 #include "pc_pci.h"
 #include "pc_acpi.h"
 #include "pc_hal_native_backend.h"
+#include "nv2a_vertex_shader.h"
 #include "include/pc_hal.h"
 
 #define COM1 0x3F8u
@@ -382,7 +383,20 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
         serial_write("PC-HAL: native backend ABI contract ERROR\n");
         for (;;) __asm__ volatile ("cli; hlt");
     }
-    serial_write("PC-HARNESS: entered 32-bit bare-metal kernel\n");
+    {
+        const uint32_t terminated_nop[4] = { 0u, 0u, 0u, 1u };
+        pc_nv2a_vertex_program_info shader_info;
+        if (PcNv2aValidateVertexProgram(terminated_nop, 1u, &shader_info) == 0 &&
+            shader_info.instruction_count == 1u &&
+            shader_info.input_mask == 0u &&
+            shader_info.output_mask == 0u) {
+            serial_write("NV2A: XboxRuntime freestanding microcode validator PASS\\n");
+        } else {
+            serial_write("NV2A: microcode validator self-test ERROR\\n");
+            for (;;) __asm__ volatile ("cli; hlt");
+        }
+    }
+    serial_write("PC-HARNESS: entered 32-bit bare-metal kernel\\n");
     if (multiboot_magic != MULTIBOOT_BOOTLOADER_MAGIC || !info) {
         serial_write("PC-HARNESS: ERROR invalid Multiboot handoff\n");
         for (;;) __asm__ volatile ("cli; hlt");
