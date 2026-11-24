@@ -51,9 +51,12 @@ pc_pci.o: pc_pci.c pc_pci.h | check-tools
 pc_acpi.o: pc_acpi.c pc_acpi.h | check-tools
 	$(CC) $(CFLAGS) -c $< -o $@
 
-pc-harness.elf: boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_pci.o pc_acpi.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o linker.ld
-	$(LD) $(LDFLAGS) -o $@ boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_pci.o pc_acpi.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o
+pc_apic.o: pc_apic.c pc_apic.h pc_acpi.h | check-tools
+	$(CC) $(CFLAGS) -c $< -o $@
+
+pc-harness.elf: boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_pci.o pc_acpi.o pc_apic.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o linker.ld
+	$(LD) $(LDFLAGS) -o $@ boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_pci.o pc_acpi.o pc_apic.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o
 	@file $@
 
 clean:
-	rm -f boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_pci.o pc_acpi.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o pc-harness.elf
+	rm -f boot.o kernel.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_pci.o pc_acpi.o pc_apic.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o pc-harness.elf
