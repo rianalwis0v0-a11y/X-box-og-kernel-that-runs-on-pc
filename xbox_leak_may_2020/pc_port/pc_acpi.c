@@ -144,30 +144,31 @@ int PcAcpiParseMadt(const void *data, size_t available, pc_acpi_madt_info *out)
     return 1;
 }
 
-/*
- * The early 32-bit harness runs with paging disabled and identity-accesses
- * firmware tables. Reject addresses/ranges that cannot be represented by
- * its 32-bit physical address space. This is not a general virtual mapper.
- */
-int PcAcpiFindMadt(const pc_acpi_rsdp_info *rsdp, pc_acpi_madt_info *out)
+
+int PcAcpiFindMadtMapped(const pc_acpi_rsdp_info *rsdp,
+                         pc_acpi_map_physical_fn map_physical,
+                         void *context, pc_acpi_madt_info *out)
 {
     uint32_t root_address, root_length, entry_size, offset;
     const uint8_t *root;
     int use_xsdt = 0;
-    if (!rsdp || !out) return 0;
+    const void *mapped = 0;
+    if (!rsdp || !map_physical || !out) return 0;
     if (rsdp->revision >= 2u && rsdp->xsdt_address != 0u) {
         if (rsdp->xsdt_address > UINT32_MAX) return 0;
         root_address = (uint32_t)rsdp->xsdt_address;
         use_xsdt = 1;
-    } else {
-        root_address = rsdp->rsdt_address;
-    }
-    if (!root_address || root_address > UINT32_MAX - 36u) return 0;
-    root = (const uint8_t *)(uintptr_t)root_address;
+    } else root_address = rsdp->rsdt_address;
+
+    if (!root_address || !map_physical(context, root_address, 36u, &mapped) || !mapped)
+        return 0;
+    root = (const uint8_t *)mapped;
     root_length = read_u32(root + 4u);
     if (root_length < 36u || root_length > 1024u * 1024u ||
-        root_address > UINT32_MAX - root_length)
+        root_address > UINT32_MAX - root_length ||
+        !map_physical(context, root_address, root_length, &mapped) || !mapped)
         return 0;
+    root = (const uint8_t *)mapped;
     if (!PcAcpiValidateSdt(root, root_length, use_xsdt ? "XSDT" : "RSDT",
                            &root_length))
         return 0;
@@ -180,15 +181,36 @@ int PcAcpiFindMadt(const pc_acpi_rsdp_info *rsdp, pc_acpi_madt_info *out)
         const uint8_t *table;
         uint32_t table_length;
         if (!address || address > UINT32_MAX - 36u) continue;
-        table = (const uint8_t *)(uintptr_t)(uint32_t)address;
+        if (!map_physical(context, (uint32_t)address, 36u, &mapped) || !mapped)
+            continue;
+        table = (const uint8_t *)mapped;
         table_length = read_u32(table + 4u);
         if (table_length < 36u || table_length > 1024u * 1024u ||
-            address > UINT32_MAX - table_length)
+            address > UINT32_MAX - table_length ||
+            !map_physical(context, (uint32_t)address, table_length, &mapped) ||
+            !mapped)
             continue;
+        table = (const uint8_t *)mapped;
         if (table[0] == 'A' && table[1] == 'P' &&
             table[2] == 'I' && table[3] == 'C' &&
             PcAcpiParseMadt(table, table_length, out))
             return 1;
     }
     return 0;
+}
+
+static int map_identity_physical(void *context, uint32_t address,
+                                size_t minimum_bytes, const void **out)
+{
+    (void)context;
+    if (!out || !address || minimum_bytes == 0u ||
+        minimum_bytes > UINT32_MAX - address)
+        return 0;
+    *out = (const void *)(uintptr_t)address;
+    return 1;
+}
+
+int PcAcpiFindMadt(const pc_acpi_rsdp_info *rsdp, pc_acpi_madt_info *out)
+{
+    return PcAcpiFindMadtMapped(rsdp, map_identity_physical, 0, out);
 }
