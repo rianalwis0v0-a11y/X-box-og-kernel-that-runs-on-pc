@@ -33,3 +33,12 @@ The PC must not be told that a physical NV2A exists. The Xbox kernel's NV2A-faci
 ## Current limitations
 
 The native harness currently enumerates PCI devices and decodes assigned BAR values, but its MMIO mapper deliberately returns unsupported and it has no vendor-specific GPU command backend. Therefore this milestone adds portable NV2A shader validation only; it does not yet submit rendering to a physical PC GPU. A working native backend requires a selected GPU family and implementation of its command processor, memory manager, synchronization and display path.
+
+
+## Intel integrated-GPU discovery foundation
+
+The PC harness now has a freestanding Intel display-controller discovery module. It identifies PCI vendor 8086 display/VGA functions, records the PCI revision and assigned BAR resources, and conservatively classifies a curated set of known device IDs into broad architecture generations (Gen2 through Gen12). Unknown IDs remain explicitly unknown; the classifier does not guess.
+
+The kernel PCI scan reports detected Intel display devices and their classified generation. CI tests device classification, rejection of non-Intel/non-display functions, BAR decoding, and a 32-bit freestanding compile.
+
+**This is discovery and resource-description groundwork only. It is not an Intel GPU driver.** It does not enable PCI memory decoding or bus mastering, map BARs, initialise GT power/forcewake, allocate GGTT/GTT or local memory, submit render/BLT commands, compile NV2A shaders, manage fences, or drive display output. No GPU registers are touched. Generation-specific command backends must be implemented and validated independently; support for every Intel iGPU generation is not yet present.
