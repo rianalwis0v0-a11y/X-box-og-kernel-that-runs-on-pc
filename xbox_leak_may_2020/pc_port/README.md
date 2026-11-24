@@ -116,7 +116,7 @@ The 32-bit page-table builder now preserves the x86 PWT and PCD leaf-entry flags
 
 `pc_apic.c/.h` now provides a staged xAPIC backend: it enables the BSP local APIC through IA32_APIC_BASE, masks local LVT sources, attaches caller-mapped I/O APIC windows using MADT GSI bases, routes a GSI with ACPI polarity/trigger flags, and issues local-APIC EOI. The LAPIC physical address and mapped virtual address are separate parameters; the caller must establish uncached MMIO mappings before calling these routines. x2APIC mode is rejected rather than mis-handled.
 
-This driver is compiled into the harness, but is intentionally not activated by `kernel_main`: firmware MADT table discovery, MMIO mapping/cache policy, APIC-vs-PIC selection, IDT vector ownership, and an IRQ dispatch path that sends LAPIC EOI still need integration. The existing PIT self-test continues using the legacy PIC. No claim of APIC hardware testing is made.
+The driver now checks CPUID APIC capability before enabling the local APIC, provides a mask-all operation for every I/O APIC redirection entry, and masks all I/O APIC pins when an I/O APIC is attached so firmware routing is never inherited accidentally. The IDT also installs a dedicated 0xFF local-APIC spurious-vector stub (which correctly does not send EOI). These are safety prerequisites, not proof of a complete APIC interrupt path. The driver is still not activated by `kernel_main`: verified uncached MMIO mappings, paging activation, APIC-vs-PIC selection, PIT GSI routing, and runtime APIC interrupt testing remain pending. The existing PIT self-test continues using the legacy PIC. No claim of APIC hardware testing is made.
 
 ## Firmware ACPI root-table discovery
 
