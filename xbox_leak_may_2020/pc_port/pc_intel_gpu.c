@@ -1,5 +1,4 @@
 #include "pc_intel_gpu.h"
-#include <string.h>
 
 /* Conservative, well-known desktop/mobile Intel graphics PCI IDs.
  * Families intentionally map to architecture generations, not exact SKUs. */
@@ -56,13 +55,14 @@ int PcIntelGpuBuildInfo(uint16_t vendor, uint16_t device,
                         pc_intel_gpu_info *output)
 {
     int count;
+    pc_intel_gpu_info empty = {0};
     if (!bars || !output || vendor != PC_INTEL_PCI_VENDOR_ID)
         return 0;
     if (((class_register >> 24) & 0xffu) != PC_INTEL_CLASS_DISPLAY ||
         ((class_register >> 16) & 0xffu) != PC_INTEL_SUBCLASS_VGA)
         return 0;
 
-    memset(output, 0, sizeof(*output));
+    *output = empty;
     output->vendor_id = vendor;
     output->device_id = device;
     output->revision = revision;
@@ -74,7 +74,7 @@ int PcIntelGpuBuildInfo(uint16_t vendor, uint16_t device,
     count = PcPciDecodeBars(bars, PC_PCI_MAX_BARS, output->resources,
                             PC_INTEL_MAX_RESOURCES);
     if (count < 0) {
-        memset(output, 0, sizeof(*output));
+        *output = empty;
         return 0;
     }
     output->resource_count = (uint8_t)count;
