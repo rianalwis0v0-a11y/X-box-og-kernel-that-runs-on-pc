@@ -31,6 +31,10 @@ jobs:
         run: gcc -std=c11 -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port xbox_leak_may_2020/pc_port/pc_pci.c xbox_leak_may_2020/pc_port/pc_intel_gpu.c xbox_leak_may_2020/pc_port/test_pc_intel_gpu.c -o /tmp/pc-intel-gpu-tests && /tmp/pc-intel-gpu-tests
       - name: Compile Intel GPU discovery for 32-bit freestanding target
         run: gcc -m32 -std=c11 -ffreestanding -fno-builtin -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port -fsyntax-only xbox_leak_may_2020/pc_port/pc_intel_gpu.c
+      - name: Test Intel Gen9 MMIO access boundary
+        run: gcc -std=c11 -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port xbox_leak_may_2020/pc_port/pc_pci.c xbox_leak_may_2020/pc_port/pc_intel_gpu.c xbox_leak_may_2020/pc_port/pc_intel_gen9.c xbox_leak_may_2020/pc_port/test_pc_intel_gen9.c -o /tmp/pc-intel-gen9-tests && /tmp/pc-intel-gen9-tests
+      - name: Compile Intel Gen9 backend for 32-bit freestanding target
+        run: gcc -m32 -std=c11 -ffreestanding -fno-builtin -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port -fsyntax-only xbox_leak_may_2020/pc_port/pc_intel_gen9.c
       - name: Test ACPI RSDP and MADT parser
         run: gcc -std=c11 -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port xbox_leak_may_2020/pc_port/pc_acpi.c xbox_leak_may_2020/pc_port/test_pc_acpi.c -o /tmp/pc-acpi-tests && /tmp/pc-acpi-tests
       - name: Compile ACPI parser for 32-bit freestanding target
