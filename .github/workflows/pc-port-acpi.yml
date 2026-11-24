@@ -34,3 +34,18 @@ jobs:
 
       - name: Run ACPI parser tests
         run: /tmp/test_pc_acpi
+
+  freestanding-harness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Install 32-bit compiler support
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib
+      - name: Build 32-bit bare-metal PC harness
+        working-directory: xbox_leak_may_2020/pc_port
+        run: |
+          make clean
+          make CROSS=
