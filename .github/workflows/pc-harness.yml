@@ -94,7 +94,7 @@ jobs:
           status=$?
           set -e
           cat qemu.log
-          grep -F "PC-HAL: VGA text-mode boot animation rendered" qemu.log
+          grep -F "PC-BOOT: placeholder VGA splash disabled; native Xbox ani2 path pending" qemu.log
           grep -F "PC-HAL: flat GDT installed" qemu.log
           grep -F "PC-HAL: exception IDT installed (vectors 0-31)" qemu.log
           grep -F "PC-HAL: native backend ABI contract PASS (PCI + PIC/PIT; MMIO unsupported)" qemu.log
@@ -109,5 +109,7 @@ jobs:
           grep -F "PC-HAL: physical allocator PASS page=" qemu.log
           grep -F "PC-HAL: PIT IRQ0 self-test PASS ticks=" qemu.log
           grep -F "PC-HARNESS: native PC HAL probe PASS" qemu.log
+          grep -F "NV2A: XboxRuntime freestanding microcode validator PASS" qemu.log
+          grep -F "XBOX-BOOT: xboxkrnl.exe module not supplied" qemu.log
           grep -F "PC-HARNESS: stopping before Xbox kernel execution" qemu.log
           test "$status" -eq 124
