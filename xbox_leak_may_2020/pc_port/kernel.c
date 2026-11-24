@@ -8,6 +8,8 @@
 #include "pc_hal_native.h"
 #include "pc_pci.h"
 #include "pc_acpi.h"
+#include "pc_hal_native_backend.h"
+#include "include/pc_hal.h"
 
 #define COM1 0x3F8u
 #define MULTIBOOT_BOOTLOADER_MAGIC 0x2BADB002u
@@ -411,6 +413,12 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
     serial_write("PC-HAL: flat GDT installed\n");
     PcIdtInstallExceptions();
     serial_write("PC-HAL: exception IDT installed (vectors 0-31)\n");
+    if (pc_hal_validate(PcHalNativeGetOps()) == PC_STATUS_OK) {
+        serial_write("PC-HAL: native backend ABI contract PASS (PCI + PIC/PIT; MMIO unsupported)\n");
+    } else {
+        serial_write("PC-HAL: native backend ABI contract ERROR\n");
+        for (;;) __asm__ volatile ("cli; hlt");
+    }
     serial_write("PC-HARNESS: entered 32-bit bare-metal kernel\n");
     if (multiboot_magic != MULTIBOOT_BOOTLOADER_MAGIC || !info) {
         serial_write("PC-HARNESS: ERROR invalid Multiboot handoff\n");
