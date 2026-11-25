@@ -521,8 +521,8 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
 
             /*
              * bldr32 maps the first 256 MiB identity and aliases it at
-             * 0x80000000. Build the same two-level layout, but keep paging
-             * disabled until the PC-specific device map is complete.
+             * 0x80000000. Build the two-level identity/alias layout, then
+             * activate paging after checking kernel and stack bounds.
              */
             {
                 /* 129 base pages plus room for up to nine APIC MMIO PDEs. */
