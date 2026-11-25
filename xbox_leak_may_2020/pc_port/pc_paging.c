@@ -144,6 +144,36 @@ int pc_paging_map(pc_paging_context *c,
     return 1;
 }
 
+int pc_paging_map_mmio_identity(pc_paging_context *c,
+                                uint64_t physical_base, uint64_t length,
+                                uint32_t *mapped_base,
+                                uint32_t *mapped_length) {
+    const uint64_t address_limit = 0x100000000ULL;
+    const uint64_t page_mask = (uint64_t)PC_PAGING_PAGE_SIZE - 1u;
+    uint64_t end, aligned_base, aligned_end, span;
+    if (!c || !mapped_base || !mapped_length || !length ||
+        physical_base >= address_limit ||
+        length > UINT64_MAX - physical_base)
+        return 0;
+    end = physical_base + length;
+    if (end > address_limit) return 0;
+    aligned_base = physical_base & ~page_mask;
+    if (end > address_limit - page_mask) return 0;
+    aligned_end = (end + page_mask) & ~page_mask;
+    if (aligned_end <= aligned_base || aligned_end > address_limit)
+        return 0;
+    span = aligned_end - aligned_base;
+    /* pc_paging_map uses a 32-bit length and rejects a 4 GiB span. */
+    if (span > UINT32_MAX) return 0;
+    if (!pc_paging_map(c, (uint32_t)aligned_base,
+                       (uint32_t)aligned_base, (uint32_t)span,
+                       PC_PAGING_WRITE | PC_PAGING_PCD | PC_PAGING_PWT))
+        return 0;
+    *mapped_base = (uint32_t)aligned_base;
+    *mapped_length = (uint32_t)span;
+    return 1;
+}
+
 int pc_paging_translate(const pc_paging_context *c,
                         uint32_t virtual_address, uint32_t *physical_address,
                         uint32_t *flags) {
