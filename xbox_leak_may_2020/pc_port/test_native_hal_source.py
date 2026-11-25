@@ -61,6 +61,21 @@ class NativeXboxHalSourceTests(unittest.TestCase):
         self.assertIn("PC-HAL: paging activated; identity-map execution check PASS", source)
         self.assertIn("or $0x80000000, %%eax", source)
 
+    def test_native_mmio_mapper_requires_live_paging_and_invalidates_tlb(self):
+        backend = (Path(__file__).resolve().parent / "pc_hal_native_backend.c").read_text(encoding="utf-8")
+        header = (Path(__file__).resolve().parent / "pc_hal_native_backend.h").read_text(encoding="utf-8")
+        kernel = (Path(__file__).resolve().parent / "kernel.c").read_text(encoding="utf-8")
+        self.assertIn("PcHalNativeSetPagingContext", header)
+        self.assertIn("if (!native_paging || !length", backend)
+        self.assertIn("if (!(cr0 & 0x80000000u))", backend)
+        self.assertIn("pc_paging_map_mmio_identity(native_paging", backend)
+        self.assertIn("invlpg", backend)
+        self.assertIn("PcHalNativeSetPagingContext(&xbox_page_tables);", kernel)
+        self.assertLess(
+            kernel.index("PC-HAL: paging activated; identity-map execution check PASS"),
+            kernel.index("PcHalNativeSetPagingContext(&xbox_page_tables);"),
+        )
+
     def test_pci_config_access_restores_the_callers_interrupt_flag(self):
         source = (HAL / "i386" / "pcispace.c").read_text(encoding="utf-8")
         self.assertIn("pushfd", source)
