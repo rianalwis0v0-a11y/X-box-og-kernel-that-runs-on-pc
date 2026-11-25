@@ -37,6 +37,31 @@ int main(void) {
                           0x1001u, PC_PAGING_WRITE));
     assert(!pc_paging_map(&paging, 0xfffff000u, 0x00300000u,
                           0x2000u, PC_PAGING_WRITE));
+    {
+        uint32_t mmio_base = 0u, mmio_length = 0u;
+        /* Unaligned device BAR ranges are rounded to complete UC pages. */
+        assert(pc_paging_map_mmio_identity(&paging, 0xfec00020ULL, 0x80u,
+                                           &mmio_base, &mmio_length));
+        assert(mmio_base == 0xfec00000u && mmio_length == 0x1000u);
+        assert(pc_paging_translate(&paging, 0xfec00020u, &physical, &flags));
+        assert(physical == 0xfec00020u);
+        assert(flags == (PC_PAGING_WRITE | PC_PAGING_PCD | PC_PAGING_PWT));
+
+        /* A range crossing a 4 KiB boundary maps both pages. */
+        assert(pc_paging_map_mmio_identity(&paging, 0xfed00ff0ULL, 0x30u,
+                                           &mmio_base, &mmio_length));
+        assert(mmio_base == 0xfed00000u && mmio_length == 0x2000u);
+        assert(pc_paging_translate(&paging, 0xfed01010u, &physical, &flags));
+        assert(physical == 0xfed01010u);
+        assert(flags == (PC_PAGING_WRITE | PC_PAGING_PCD | PC_PAGING_PWT));
+
+        assert(!pc_paging_map_mmio_identity(&paging, 0x100000000ULL, 0x1000u,
+                                            &mmio_base, &mmio_length));
+        assert(!pc_paging_map_mmio_identity(&paging, 0xfffffff0ULL, 0x40u,
+                                            &mmio_base, &mmio_length));
+        assert(!pc_paging_map_mmio_identity(&paging, 0xfec00000ULL, 0u,
+                                            &mmio_base, &mmio_length));
+    }
     assert(!pc_paging_translate(&paging, 0x1000u, &physical, &flags));
 
     /* A corrupted public context must fail closed, not index past storage. */
