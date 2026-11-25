@@ -36,25 +36,24 @@ pc_status PcIntelDriverInitialize(const pc_hal_ops *hal,
         if (status != PC_STATUS_OK) return status;
     }
 
+    /* Validate BAR encodings before GPU classification so malformed
+     * hardware configuration is reported as an I/O error, not "unknown GPU". */
+    count = PcPciDecodeBars(bars, PC_PCI_MAX_BARS, resources,
+                            PC_PCI_MAX_BARS);
+    if (count < 0) return PC_STATUS_IO_ERROR;
+
     if (!PcIntelGpuBuildInfo(pci.vendor_id, pci.device_id,
                              (uint8_t)class_revision, class_revision,
                              bars, &gpu))
         return PC_STATUS_UNSUPPORTED;
     if (gpu.generation != PC_INTEL_GEN9)
         return PC_STATUS_UNSUPPORTED;
+    if (count != (int)gpu.resource_count)
+        return PC_STATUS_IO_ERROR;
 
     driver->pci = pci;
     driver->gpu = gpu;
     driver->state = PC_INTEL_DRIVER_DISCOVERED;
-
-    count = PcPciDecodeBars(bars, PC_PCI_MAX_BARS, resources,
-                            PC_PCI_MAX_BARS);
-    if (count < 0 || count != (int)gpu.resource_count) {
-        driver->state = PC_INTEL_DRIVER_NOT_STARTED;
-        driver->gpu = (pc_intel_gpu_info){0};
-        driver->pci = (pc_pci_device){0};
-        return PC_STATUS_IO_ERROR;
-    }
 
     /* BAR values identify an address, not the resource's decoded length.
      * Keep discovery state and defer activation until firmware resource
