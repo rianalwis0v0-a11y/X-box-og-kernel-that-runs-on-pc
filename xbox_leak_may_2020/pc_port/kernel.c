@@ -11,6 +11,8 @@
 #include "pc_intel_driver.h"
 #include "pc_acpi.h"
 #include "pc_hal_native_backend.h"
+#include "i915_winhal_compat.h"
+#include "i915_pc_driver.h"
 #include "nv2a_vertex_shader.h"
 #include "include/pc_hal.h"
 
@@ -612,6 +614,28 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
         }
     }
     report_pci();
+    {
+        i915_winhal_context i915_hal;
+        i915_pc_device i915_device;
+        const pc_hal_ops *native_ops = PcHalNativeGetOps();
+        pc_status hal_status = I915WinHalInit(&i915_hal, native_ops);
+        if (hal_status == PC_STATUS_OK) {
+            hal_status = I915PcDriverStart(&i915_hal, 0x3ea1u, &i915_device);
+            if (i915_device.state == I915_PC_DETECTED_MMIO_DEFERRED) {
+                serial_write("I915: Intel UHD 610 Gen9 device detected through PC HAL; driver startup deferred (safe MMIO mapper unavailable)\\n");
+            } else if (i915_device.state == I915_PC_DEVICE_NOT_FOUND) {
+                serial_write("I915: target Intel UHD 610 PCI device not present\\n");
+            } else {
+                serial_write("I915: driver startup did not reach hardware-ready state; status=");
+                serial_hex((uint32_t)hal_status);
+                serial_write("\\n");
+            }
+        } else {
+            serial_write("I915: PC HAL compatibility initialization failed; status=");
+            serial_hex((uint32_t)hal_status);
+            serial_write("\\n");
+        }
+    }
     {
         pc_intel_driver intel_driver;
         pc_status driver_status =
