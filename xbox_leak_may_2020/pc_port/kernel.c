@@ -619,7 +619,7 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
         if (intel_driver.state == PC_INTEL_DRIVER_DISCOVERED) {
             serial_write("I915: Intel UHD 610 Gen9 device discovered through built-in PC HAL shim; MMIO activation deferred safely\n");
         } else if (driver_status == PC_STATUS_DEVICE_NOT_FOUND) {
-            serial_write("I915: target Intel UHD 610 PCI device not present\\n");
+            serial_write("I915: target Intel UHD 610 PCI device not present\n");
         } else {
             serial_write("I915: built-in Intel driver not ready; status=");
             serial_hex((uint32_t)driver_status);
