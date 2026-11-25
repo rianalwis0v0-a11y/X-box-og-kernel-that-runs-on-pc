@@ -50,7 +50,7 @@ class NativeXboxHalSourceTests(unittest.TestCase):
         self.assertIn("PC_PAGING_WRITE | PC_PAGING_PCD | PC_PAGING_PWT", paging)
         self.assertIn("pc_paging_map_mmio_identity", source)
         self.assertIn("map_firmware_apic_mmio()", source)
-        self.assertIn("firmware LAPIC/IOAPIC MMIO mappings prepared uncached (paging OFF)", source)
+        self.assertIn("firmware LAPIC/IOAPIC MMIO mappings prepared uncached (paging active)", source)
 
     def test_page_table_activation_is_guarded_by_identity_map_bounds(self):
         source = (Path(__file__).resolve().parent / "kernel.c").read_text(encoding="utf-8")
