@@ -329,6 +329,23 @@ static int test_legacy_irq_routes(void)
     return keyboard_count == 1u && slave_count == 1u;
 }
 
+/* Activate validated non-PAE tables after confirming the running image
+ * and stack are within the identity-mapped first 256 MiB. */
+static int activate_pc_paging(uint32_t directory_physical)
+{
+    uint32_t cr0;
+    if ((directory_physical & 0xfffu) || directory_physical >= 0x10000000u)
+        return 0;
+    __asm__ volatile ("mov %%cr0, %0" : "=r"(cr0));
+    if (cr0 & 0x80000000u) return 0;
+    __asm__ volatile ("mov %0, %%cr3; mov %%cr0, %%eax; "
+                      "or $0x80000000, %%eax; mov %%eax, %%cr0; "
+                      "jmp 1f; 1:"
+                      : : "r"(directory_physical) : "eax", "memory");
+    __asm__ volatile ("mov %%cr0, %0" : "=r"(cr0));
+    return (cr0 & 0x80000000u) != 0u;
+}
+
 static int map_firmware_apic_mmio(void)
 {
     uint32_t i, mapped_base, mapped_length;
@@ -533,6 +550,21 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
                         alias_pa == 0x00123456u &&
                         page_flags == PC_PAGING_WRITE) {
                         serial_write("PC-HAL: Xbox 256 MiB identity + 0x80000000 alias tables verified (paging OFF)\n");
+                        {
+                            uint32_t stack_pointer;
+                            uint32_t kernel_begin = (uint32_t)(uintptr_t)&__kernel_start;
+                            uint32_t kernel_finish = (uint32_t)(uintptr_t)&__kernel_end;
+                            __asm__ volatile ("mov %%esp, %0" : "=r"(stack_pointer));
+                            if (stack_pointer >= 0x10000000u ||
+                                kernel_begin >= 0x10000000u ||
+                                kernel_finish > 0x10000000u) {
+                                serial_write("PC-HAL: paging activation refused; execution outside identity map\n");
+                            } else if (activate_pc_paging(block)) {
+                                serial_write("PC-HAL: paging activated; identity-map execution check PASS\n");
+                            } else {
+                                serial_write("PC-HAL: paging activation refused or failed\n");
+                            }
+                        }
                         if (apic_map_ok && firmware_madt_valid) {
                             uint32_t apic_pa, apic_flags, apic_index;
                             int mappings_valid =
