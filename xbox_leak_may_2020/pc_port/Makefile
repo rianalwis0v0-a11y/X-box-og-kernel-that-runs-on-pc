@@ -54,9 +54,6 @@ pc_hal_native_backend.o: pc_hal_native_backend.c pc_hal_native_backend.h include
 i915_winhal_compat.o: i915_winhal_compat.c i915_winhal_compat.h include/pc_hal.h | check-tools
 	$(CC) $(CFLAGS) -c $< -o $@
 
-i915_driver.o: i915_driver.c i915_driver.h i915_winhal_compat.h pc_intel_gpu.h include/pc_hal.h | check-tools
-	$(CC) $(CFLAGS) -c $< -o $@
-
 nv2a_vertex_shader.o: nv2a_vertex_shader.c nv2a_vertex_shader.h | check-tools
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -78,7 +75,7 @@ pc_acpi.o: pc_acpi.c pc_acpi.h | check-tools
 pc_apic.o: pc_apic.c pc_apic.h pc_acpi.h | check-tools
 	$(CC) $(CFLAGS) -c $< -o $@
 
-pc-harness.elf: boot.o kernel.o nv2a_vertex_shader.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_hal_contract.o pc_hal_native_backend.o i915_winhal_compat.o i915_driver.o pc_pci.o pc_intel_gpu.o pc_intel_gen9.o pc_intel_driver.o pc_acpi.o pc_apic.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o linker.ld
+pc-harness.elf: boot.o kernel.o nv2a_vertex_shader.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_hal_contract.o pc_hal_native_backend.o i915_winhal_compat.o pc_pci.o pc_intel_gpu.o pc_intel_gen9.o pc_intel_driver.o pc_acpi.o pc_apic.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o linker.ld
 	$(LD) $(LDFLAGS) -o $@ boot.o kernel.o nv2a_vertex_shader.o xbox_pc_boot.o pc_paging.o pc_physmem.o pc_hal_native.o pc_hal_contract.o pc_hal_native_backend.o i915_winhal_compat.o pc_pci.o pc_intel_gpu.o pc_intel_gen9.o pc_intel_driver.o pc_acpi.o pc_apic.o pc_gdt.o pc_idt.o pc_irq.o exception_stubs.o irq_stubs.o
 	@file $@
 
