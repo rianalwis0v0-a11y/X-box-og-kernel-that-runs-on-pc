@@ -592,10 +592,8 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
                                                    PC_PAGING_PWT | PC_PAGING_PCD);
                             }
                             if (mappings_valid) {
-                                serial_write("PC-HAL: firmware LAPIC/IOAPIC MMIO mappings prepared uncached (paging active)\n");
-                                /* Keep the legacy PIC/PIT path operational.
-                                 * IOAPIC redirections are attached but remain masked
-                                 * until the kernel has an APIC-aware IRQ dispatcher. */
+                                serial_write("PC-HAL: firmware LAPIC/IOAPIC MMIO mappings prepared uncached (paging active)\\n");
+                                /* Keep PIC/PIT active until APIC-aware IRQ dispatch exists. */
                                 if (firmware_madt.ioapic_count) {
                                     uint32_t ioapic_va[PC_ACPI_MAX_IOAPICS];
                                     uint32_t io_index;
@@ -615,16 +613,7 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
                                 }
                                 serial_write("PC-HAL: local APIC held disabled until APIC IRQ dispatch is ready\\n");
                             } else {
-                                            serial_write("PC-HAL: IOAPIC attach failed; legacy PIC remains active\n");
-                                        }
-                                    } else {
-                                        serial_write("PC-HAL: MADT has no IOAPIC; legacy PIC remains active\n");
-                                    }
-                                } else {
-                                    serial_write("PC-HAL: local APIC unavailable; legacy PIC remains active\n");
-                                }
-                            } else {
-                                serial_write("PC-HAL: APIC MMIO mapping verification ERROR\n");
+                                serial_write("PC-HAL: APIC MMIO mapping verification ERROR\\n");
                             }
                         } else if (firmware_madt_valid) {
                             serial_write("PC-HAL: APIC MMIO mapping preparation ERROR\n");
