@@ -52,11 +52,14 @@ class NativeXboxHalSourceTests(unittest.TestCase):
         self.assertIn("map_firmware_apic_mmio()", source)
         self.assertIn("firmware LAPIC/IOAPIC MMIO mappings prepared uncached (paging OFF)", source)
 
-    def test_apic_page_tables_are_not_activated_prematurely(self):
+    def test_page_table_activation_is_guarded_by_identity_map_bounds(self):
         source = (Path(__file__).resolve().parent / "kernel.c").read_text(encoding="utf-8")
-        self.assertNotIn("mov %0, %%cr3", source)
-        self.assertNotIn("mov %%eax, %%cr0", source)
-        self.assertIn("paging OFF", source)
+        self.assertIn("static int activate_pc_paging(uint32_t directory_physical)", source)
+        self.assertIn("kernel_finish > 0x10000000u", source)
+        self.assertIn("stack_pointer >= 0x10000000u", source)
+        self.assertIn("block < 0x10000000u", source)
+        self.assertIn("PC-HAL: paging activated; identity-map execution check PASS", source)
+        self.assertIn("or $0x80000000, %%eax", source)
 
     def test_pci_config_access_restores_the_callers_interrupt_flag(self):
         source = (HAL / "i386" / "pcispace.c").read_text(encoding="utf-8")
