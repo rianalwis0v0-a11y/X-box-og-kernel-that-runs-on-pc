@@ -51,22 +51,9 @@ pc_status PcIntelDriverInitialize(const pc_hal_ops *hal,
                             PC_PCI_MAX_BARS);
     if (count < 0) return PC_STATUS_IO_ERROR;
 
-    /* The native HAL currently returns UNSUPPORTED for MMIO. Do not attach
-     * to a guessed BAR or touch GPU registers until mapping is implemented. */
-    for (i = 0; i < (uint32_t)count; ++i) {
-        volatile void *mapping = 0;
-        if (resources[i].kind != PC_PCI_BAR_MEMORY) continue;
-        status = I915WinHalMapMmio(&compat, resources[i].base,
-                                   PC_INTEL_GEN9_MMIO_MIN_BYTES, &mapping);
-        if (status != PC_STATUS_OK) return status;
-        if (mapping) {
-            pc_intel_gen9_device gen9;
-            if (PcIntelGen9Attach(&gpu, mapping,
-                                  PC_INTEL_GEN9_MMIO_MIN_BYTES, &gen9)) {
-                driver->state = PC_INTEL_DRIVER_READY;
-                return PC_STATUS_OK;
-            }
-        }
-    }
+    /* BAR values identify an address, not the resource's decoded length.
+     * Keep discovery state and defer activation until firmware resource
+     * lengths, reserved-range validation, and the native MMIO mapper exist.
+     * Never guess a 4 KiB aperture or touch GT registers here. */
     return PC_STATUS_UNSUPPORTED;
 }
