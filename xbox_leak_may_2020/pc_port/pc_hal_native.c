@@ -1,37 +1,4 @@
 #include "pc_hal_native.h"
-#include "pc_paging.h"
-
-static pc_paging_context *g_native_paging_context;
-
-void PcHalNativeSetPagingContext(pc_paging_context *context)
-{
-    g_native_paging_context = context;
-}
-
-int PcHalNativeMapMmio(uint64_t physical_base, uint64_t length,
-                       volatile void **virtual_address)
-{
-    uint32_t mapped_base, mapped_length, cr3;
-    uint64_t end;
-    if (virtual_address) *virtual_address = 0;
-    if (!virtual_address || !g_native_paging_context || !length ||
-        physical_base < 0x10000000ULL ||
-        physical_base > 0xffffffffULL ||
-        length > 0x100000000ULL - physical_base)
-        return 0;
-    end = physical_base + length;
-    if (end > 0x100000000ULL ||
-        !pc_paging_map_mmio_identity(g_native_paging_context,
-            physical_base, length, &mapped_base, &mapped_length))
-        return 0;
-    (void)mapped_length;
-    /* Publish new PDE/PTE entries to the active MMU before returning a VA. */
-    __asm__ volatile ("mov %%cr3, %0" : "=r"(cr3));
-    __asm__ volatile ("mov %0, %%cr3" : : "r"(cr3) : "memory");
-    *virtual_address = (volatile void *)(uintptr_t)
-        (mapped_base + (uint32_t)(physical_base - mapped_base));
-    return 1;
-}
 
 #if defined(_MSC_VER) && defined(_M_IX86)
 uint8_t PcHalNativeIn8(uint16_t port)
