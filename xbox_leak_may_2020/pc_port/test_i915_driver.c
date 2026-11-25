@@ -1,4 +1,5 @@
 #include "i915_driver.h"
+#include "pc_intel_gpu.h"
 #include <assert.h>
 #include <stdio.h>
 
