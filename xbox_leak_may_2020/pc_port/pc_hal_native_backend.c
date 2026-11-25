@@ -2,6 +2,9 @@
 
 #include "pc_hal_native.h"
 #include "pc_irq.h"
+#include "pc_paging.h"
+
+static pc_paging_context *native_paging;
 
 #define PC_PCI_MAX_BUSES 256u
 #define PC_PCI_MAX_DEVICES 32u
@@ -10,12 +13,28 @@
 static pc_status native_map_mmio(void *context, uint64_t physical_base,
                                  uint64_t length, volatile void **virtual_address)
 {
+    uint32_t mapped_base, mapped_length, page, cr0;
+    uint64_t end;
     (void)context;
-    (void)physical_base;
-    (void)length;
-    if (virtual_address) *virtual_address = 0;
-    /* No generic virtual-memory/MMIO mapper is wired into this backend yet. */
-    return PC_STATUS_UNSUPPORTED;
+    if (!virtual_address) return PC_STATUS_INVALID_ARGUMENT;
+    *virtual_address = 0;
+    if (!native_paging || !length ||
+        physical_base >= 0x100000000ULL ||
+        length > UINT64_MAX - physical_base)
+        return PC_STATUS_UNSUPPORTED;
+    end = physical_base + length;
+    if (end > 0x100000000ULL) return PC_STATUS_UNSUPPORTED;
+    __asm__ volatile ("mov %%cr0, %0" : "=r"(cr0));
+    if (!(cr0 & 0x80000000u)) return PC_STATUS_UNSUPPORTED;
+    if (!pc_paging_map_mmio_identity(native_paging, physical_base, length,
+                                     &mapped_base, &mapped_length))
+        return PC_STATUS_OUT_OF_RESOURCES;
+    for (page = 0; page < mapped_length; page += PC_PAGING_PAGE_SIZE) {
+        uintptr_t address = (uintptr_t)mapped_base + page;
+        __asm__ volatile ("invlpg (%0)" : : "r"(address) : "memory");
+    }
+    *virtual_address = (volatile void *)(uintptr_t)physical_base;
+    return PC_STATUS_OK;
 }
 
 static pc_status native_pci_find(void *context, uint16_t vendor_id,
@@ -118,6 +137,11 @@ static pc_status native_sleep_ns(void *context, uint64_t duration_ns)
     (void)context;
     return PcIrqSleepNs(duration_ns) ?
            PC_STATUS_OK : PC_STATUS_UNSUPPORTED;
+}
+
+void PcHalNativeSetPagingContext(pc_paging_context *paging)
+{
+    native_paging = paging;
 }
 
 const pc_hal_ops *PcHalNativeGetOps(void)
