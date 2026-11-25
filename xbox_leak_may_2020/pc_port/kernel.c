@@ -13,6 +13,7 @@
 #include "pc_hal_native_backend.h"
 #include "nv2a_vertex_shader.h"
 #include "include/pc_hal.h"
+#include "i915_driver.h"
 
 #define COM1 0x3F8u
 #define MULTIBOOT_BOOTLOADER_MAGIC 0x2BADB002u
@@ -612,6 +613,25 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
         }
     }
     report_pci();
+    {
+        i915_driver_device intel_driver;
+        pc_status driver_status = I915DriverLoad(PcHalNativeGetOps(),
+                                                 &intel_driver);
+        if (driver_status == PC_STATUS_OK) {
+            serial_write("I915: driver initialized\n");
+        } else if (intel_driver.state == I915_DRIVER_NO_DEVICE) {
+            serial_write("I915: target Intel UHD 610 not present\n");
+        } else if (intel_driver.state == I915_DRIVER_DEFERRED_NO_MMIO) {
+            serial_write("I915: Intel UHD 610 identified; driver safely deferred (MMIO mapper not ready)\n");
+            serial_write("I915: PCI id=8086:3EA1 BAR0=");
+            serial_hex(intel_driver.bar0);
+            serial_write("\n");
+        } else {
+            serial_write("I915: built-in driver probe failed status=");
+            serial_hex((uint32_t)driver_status);
+            serial_write("\n");
+        }
+    }
     {
         pc_intel_driver intel_driver;
         const pc_hal_ops *native_ops = PcHalNativeGetOps();
