@@ -60,6 +60,10 @@ jobs:
         run: gcc -std=c11 -Wall -Wextra -Werror -fsyntax-only xbox_leak_may_2020/pc_port/test_nv2a_abi.c
       - name: Validate PC platform hypercall ABI
         run: gcc -std=c11 -Wall -Wextra -Werror -fsyntax-only xbox_leak_may_2020/pc_port/test_platform_abi.c
+      - name: Test Linux i915 to PC HAL compatibility shim
+        run: gcc -std=c11 -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port xbox_leak_may_2020/pc_port/pc_hal_contract.c xbox_leak_may_2020/pc_port/i915_winhal_compat.c xbox_leak_may_2020/pc_port/test_i915_winhal_compat.c -o /tmp/i915-winhal-shim-tests && /tmp/i915-winhal-shim-tests
+      - name: Compile i915 compatibility shim for freestanding x86
+        run: gcc -m32 -std=c11 -ffreestanding -fno-builtin -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port -fsyntax-only xbox_leak_may_2020/pc_port/i915_winhal_compat.c
       - name: Install toolchain and emulator
         run: |
           sudo apt-get update
