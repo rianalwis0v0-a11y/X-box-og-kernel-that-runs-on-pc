@@ -528,7 +528,7 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
                 /* 129 base pages plus room for up to nine APIC MMIO PDEs. */
                 uint32_t block = pc_physmem_alloc_pages(&physical_memory,
                                                         138u, 1u);
-                if (block &&
+                if (block && block < 0x10000000u &&
                     pc_paging_init(&xbox_page_tables,
                         (uint32_t *)(uintptr_t)block, block,
                         (uint32_t *)(uintptr_t)(block + PC_PAGING_PAGE_SIZE),
