@@ -15,6 +15,12 @@ void PcHalNativeOut8(uint16_t port, uint8_t value);
 void PcHalNativeDisableInterrupts(void);
 void PcHalNativeEnableInterrupts(void);
 
+struct pc_paging_context;
+/* Install only after paging is active; MMIO mappings are identity-mapped UC. */
+void PcHalNativeSetPagingContext(struct pc_paging_context *context);
+int PcHalNativeMapMmio(uint64_t physical_base, uint64_t length,
+                       volatile void **virtual_address);
+
 /* Remap the dual 8259 PICs and leave every IRQ masked. */
 void PcHalNativePicRemapMasked(void);
 
