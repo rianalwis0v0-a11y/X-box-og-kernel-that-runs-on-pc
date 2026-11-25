@@ -49,7 +49,12 @@ pc_status PcIntelDriverInitialize(const pc_hal_ops *hal,
 
     count = PcPciDecodeBars(bars, PC_PCI_MAX_BARS, resources,
                             PC_PCI_MAX_BARS);
-    if (count < 0) return PC_STATUS_IO_ERROR;
+    if (count < 0 || count != (int)gpu.resource_count) {
+        driver->state = PC_INTEL_DRIVER_NOT_STARTED;
+        driver->gpu = (pc_intel_gpu_info){0};
+        driver->pci = (pc_pci_device){0};
+        return PC_STATUS_IO_ERROR;
+    }
 
     /* BAR values identify an address, not the resource's decoded length.
      * Keep discovery state and defer activation until firmware resource
