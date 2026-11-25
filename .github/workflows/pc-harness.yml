@@ -120,7 +120,7 @@ jobs:
           grep -F "PC-BOOT: placeholder VGA splash disabled; native Xbox ani2 path pending" qemu.log
           grep -F "PC-HAL: flat GDT installed" qemu.log
           grep -F "PC-HAL: exception IDT installed (vectors 0-31)" qemu.log
-          grep -F "PC-HAL: native backend ABI contract PASS (PCI + PIC/PIT; MMIO unsupported)" qemu.log
+          grep -F "PC-HAL: native backend ABI contract PASS (PCI + PIC/PIT; MMIO waits for live paging)" qemu.log
           grep -F "PC-HARNESS: entered 32-bit bare-metal kernel" qemu.log
           grep -F "PC-HARNESS: Multiboot handoff PASS" qemu.log
           grep -F "PC-HAL: executing ring-0 native x86 hardware probes" qemu.log
@@ -131,6 +131,8 @@ jobs:
           grep -F "PC-HAL: physical allocator PASS page=" qemu.log
           grep -F "PC-HAL: Xbox 256 MiB identity + 0x80000000 alias tables verified (paging OFF)" qemu.log
           grep -F "PC-HAL: firmware LAPIC/IOAPIC MMIO mappings prepared uncached (paging active)" qemu.log
+          grep -F "PC-HAL: IOAPICs attached; all redirection entries masked; legacy PIC remains active" qemu.log
+          grep -F "PC-HAL: local APIC held disabled until APIC IRQ dispatch is ready" qemu.log
           grep -F "PC-HAL: physical allocator PASS page=" qemu.log
           grep -F "PC-HAL: PIT IRQ0 self-test PASS ticks=" qemu.log
           grep -F "PC-HAL: legacy PIC IRQ1 + IRQ12 dispatch/EOI self-test PASS" qemu.log
