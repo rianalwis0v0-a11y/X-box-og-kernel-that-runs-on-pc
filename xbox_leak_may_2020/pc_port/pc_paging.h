@@ -40,6 +40,18 @@ int pc_paging_map(pc_paging_context *context,
                  uint32_t virtual_address, uint32_t physical_address,
                  uint32_t length, uint32_t flags);
 
+/*
+ * Map an assigned device MMIO physical range at the same virtual address.
+ * The range is rounded out to 4 KiB pages and mapped writable, uncached
+ * (PCD + PWT). This 32-bit non-PAE helper rejects ranges outside 4 GiB.
+ * The caller must reserve the physical range and enable these page tables
+ * before dereferencing the returned virtual address.
+ */
+int pc_paging_map_mmio_identity(pc_paging_context *context,
+                                uint64_t physical_base, uint64_t length,
+                                uint32_t *mapped_base,
+                                uint32_t *mapped_length);
+
 /* Resolve one virtual address through the tables built by this module. */
 int pc_paging_translate(const pc_paging_context *context,
                         uint32_t virtual_address, uint32_t *physical_address,
