@@ -8,6 +8,7 @@
 #include "pc_hal_native.h"
 #include "pc_pci.h"
 #include "pc_intel_gpu.h"
+#include "pc_intel_driver.h"
 #include "pc_acpi.h"
 #include "pc_hal_native_backend.h"
 #include "nv2a_vertex_shader.h"
@@ -611,6 +612,21 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
         }
     }
     report_pci();
+    {
+        pc_intel_driver intel_driver;
+        pc_status driver_status =
+            PcIntelDriverInitialize(PcHalNativeGetOps(), &intel_driver);
+        if (driver_status == PC_STATUS_OK &&
+            intel_driver.state == PC_INTEL_DRIVER_READY) {
+            serial_write("PC-GPU: Intel Gen9 driver loaded and MMIO attached\\n");
+        } else if (intel_driver.state == PC_INTEL_DRIVER_DISCOVERED) {
+            serial_write("PC-GPU: Intel Gen9 driver built-in and discovered; MMIO unavailable, safely deferred\\n");
+        } else if (driver_status == PC_STATUS_DEVICE_NOT_FOUND) {
+            serial_write("PC-GPU: Intel UHD 610 target not present; driver remains unloaded\\n");
+        } else {
+            serial_write("PC-GPU: Intel driver initialization rejected; no GPU registers touched\\n");
+        }
+    }
     serial_write("PC-HAL: starting PIT IRQ0 timer self-test\n");
     PcIrqInstallPit(100u);
     PcIrqWaitForTicks(5u);
