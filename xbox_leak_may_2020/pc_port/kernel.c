@@ -593,23 +593,28 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
                             }
                             if (mappings_valid) {
                                 serial_write("PC-HAL: firmware LAPIC/IOAPIC MMIO mappings prepared uncached (paging active)\n");
-                                if (PcApicSupported() &&
-                                    PcApicEnableLocal(&firmware_apic,
-                                        firmware_madt.local_apic_address,
-                                        firmware_madt.local_apic_address)) {
-                                    serial_write("PC-HAL: local APIC enabled; local vectors masked\n");
-                                    if (firmware_madt.ioapic_count) {
-                                        uint32_t ioapic_va[PC_ACPI_MAX_IOAPICS];
-                                        uint32_t io_index;
-                                        for (io_index = 0;
-                                             io_index < firmware_madt.ioapic_count;
-                                             ++io_index)
-                                            ioapic_va[io_index] =
-                                                firmware_madt.ioapics[io_index].address;
-                                        if (PcApicAttachIoApics(&firmware_apic,
-                                                &firmware_madt, ioapic_va)) {
-                                            serial_write("PC-HAL: IOAPICs attached; all redirection entries masked\n");
-                                        } else {
+                                /* Keep the legacy PIC/PIT path operational.
+                                 * IOAPIC redirections are attached but remain masked
+                                 * until the kernel has an APIC-aware IRQ dispatcher. */
+                                if (firmware_madt.ioapic_count) {
+                                    uint32_t ioapic_va[PC_ACPI_MAX_IOAPICS];
+                                    uint32_t io_index;
+                                    for (io_index = 0;
+                                         io_index < firmware_madt.ioapic_count;
+                                         ++io_index)
+                                        ioapic_va[io_index] =
+                                            firmware_madt.ioapics[io_index].address;
+                                    if (PcApicAttachIoApics(&firmware_apic,
+                                            &firmware_madt, ioapic_va)) {
+                                        serial_write("PC-HAL: IOAPICs attached; all redirection entries masked; legacy PIC remains active\\n");
+                                    } else {
+                                        serial_write("PC-HAL: IOAPIC attach failed; legacy PIC remains active\\n");
+                                    }
+                                } else {
+                                    serial_write("PC-HAL: MADT has no IOAPIC; legacy PIC remains active\\n");
+                                }
+                                serial_write("PC-HAL: local APIC held disabled until APIC IRQ dispatch is ready\\n");
+                            } else {
                                             serial_write("PC-HAL: IOAPIC attach failed; legacy PIC remains active\n");
                                         }
                                     } else {
