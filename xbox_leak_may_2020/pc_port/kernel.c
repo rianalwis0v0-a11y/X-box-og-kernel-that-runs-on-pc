@@ -10,6 +10,7 @@
 #include "pc_intel_gpu.h"
 #include "pc_intel_driver.h"
 #include "pc_acpi.h"
+#include "pc_apic.h"
 #include "pc_hal_native_backend.h"
 #include "nv2a_vertex_shader.h"
 #include "include/pc_hal.h"
@@ -52,6 +53,7 @@ static pc_physmem physical_memory;
 static pc_paging_context xbox_page_tables;
 static pc_acpi_madt_info firmware_madt;
 static int firmware_madt_valid;
+static pc_apic_mmio firmware_apic;
 extern uint8_t __kernel_start;
 extern uint8_t __kernel_end;
 
@@ -591,6 +593,31 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
                             }
                             if (mappings_valid) {
                                 serial_write("PC-HAL: firmware LAPIC/IOAPIC MMIO mappings prepared uncached (paging active)\n");
+                                if (PcApicSupported() &&
+                                    PcApicEnableLocal(&firmware_apic,
+                                        firmware_madt.local_apic_address,
+                                        firmware_madt.local_apic_address)) {
+                                    serial_write("PC-HAL: local APIC enabled; local vectors masked\n");
+                                    if (firmware_madt.ioapic_count) {
+                                        uint32_t ioapic_va[PC_ACPI_MAX_IOAPICS];
+                                        uint32_t io_index;
+                                        for (io_index = 0;
+                                             io_index < firmware_madt.ioapic_count;
+                                             ++io_index)
+                                            ioapic_va[io_index] =
+                                                firmware_madt.ioapics[io_index].address;
+                                        if (PcApicAttachIoApics(&firmware_apic,
+                                                &firmware_madt, ioapic_va)) {
+                                            serial_write("PC-HAL: IOAPICs attached; all redirection entries masked\n");
+                                        } else {
+                                            serial_write("PC-HAL: IOAPIC attach failed; legacy PIC remains active\n");
+                                        }
+                                    } else {
+                                        serial_write("PC-HAL: MADT has no IOAPIC; legacy PIC remains active\n");
+                                    }
+                                } else {
+                                    serial_write("PC-HAL: local APIC unavailable; legacy PIC remains active\n");
+                                }
                             } else {
                                 serial_write("PC-HAL: APIC MMIO mapping verification ERROR\n");
                             }
