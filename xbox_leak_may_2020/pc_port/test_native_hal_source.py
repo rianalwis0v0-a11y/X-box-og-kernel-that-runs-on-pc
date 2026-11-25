@@ -46,7 +46,9 @@ class NativeXboxHalSourceTests(unittest.TestCase):
         source = (Path(__file__).resolve().parent / "kernel.c").read_text(encoding="utf-8")
         self.assertIn("firmware_madt = madt;", source)
         self.assertIn("pc_physmem_reserve(&physical_memory", source)
-        self.assertIn("PC_PAGING_WRITE | PC_PAGING_PWT | PC_PAGING_PCD", source)
+        paging = (Path(__file__).resolve().parent / "pc_paging.c").read_text(encoding="utf-8")
+        self.assertIn("PC_PAGING_WRITE | PC_PAGING_PCD | PC_PAGING_PWT", paging)
+        self.assertIn("pc_paging_map_mmio_identity", source)
         self.assertIn("map_firmware_apic_mmio()", source)
         self.assertIn("firmware LAPIC/IOAPIC MMIO mappings prepared uncached (paging OFF)", source)
 
