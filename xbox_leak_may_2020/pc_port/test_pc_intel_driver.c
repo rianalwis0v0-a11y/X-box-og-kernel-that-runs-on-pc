@@ -22,5 +22,10 @@ int main(void){
  config[2]=0x02000001u; /* not a VGA display controller */
  assert(PcIntelDriverInitialize(&ops,&d)==PC_STATUS_UNSUPPORTED);
  assert(d.state==PC_INTEL_DRIVER_NOT_STARTED);
+ config[2]=0x03000001u;
+ config[9]=0x00000006u; /* reserved memory BAR encoding */
+ assert(PcIntelDriverInitialize(&ops,&d)==PC_STATUS_IO_ERROR);
+ assert(d.state==PC_INTEL_DRIVER_NOT_STARTED);
+ assert(d.gpu.vendor_id==0 && d.pci.vendor_id==0);
  puts("Intel built-in driver discovery/load tests PASS");return 0;
 }
