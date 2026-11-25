@@ -588,7 +588,7 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
                                                    PC_PAGING_PWT | PC_PAGING_PCD);
                             }
                             if (mappings_valid) {
-                                serial_write("PC-HAL: firmware LAPIC/IOAPIC MMIO mappings prepared uncached (paging OFF)\n");
+                                serial_write("PC-HAL: firmware LAPIC/IOAPIC MMIO mappings prepared uncached (paging active)\n");
                             } else {
                                 serial_write("PC-HAL: APIC MMIO mapping verification ERROR\n");
                             }
