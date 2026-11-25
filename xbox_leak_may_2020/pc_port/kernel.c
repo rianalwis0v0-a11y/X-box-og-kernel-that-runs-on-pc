@@ -331,25 +331,24 @@ static int test_legacy_irq_routes(void)
 
 static int map_firmware_apic_mmio(void)
 {
-    uint32_t i;
+    uint32_t i, mapped_base, mapped_length;
     if (!firmware_madt_valid || !firmware_madt.local_apic_address)
         return 0;
     if ((firmware_madt.local_apic_address & 0xfffu) != 0u ||
-        firmware_madt.local_apic_address < 0x10000000u)
-        return 0;
-    if (!pc_paging_map(&xbox_page_tables,
-                       firmware_madt.local_apic_address,
-                       firmware_madt.local_apic_address,
-                       PC_PAGING_PAGE_SIZE,
-                       PC_PAGING_WRITE | PC_PAGING_PWT | PC_PAGING_PCD))
+        firmware_madt.local_apic_address < 0x10000000u ||
+        !pc_paging_map_mmio_identity(&xbox_page_tables,
+            firmware_madt.local_apic_address, PC_PAGING_PAGE_SIZE,
+            &mapped_base, &mapped_length) ||
+        mapped_base != firmware_madt.local_apic_address ||
+        mapped_length != PC_PAGING_PAGE_SIZE)
         return 0;
     for (i = 0; i < firmware_madt.ioapic_count; ++i) {
         uint32_t address = firmware_madt.ioapics[i].address;
         if (!address || (address & 0xfffu) != 0u ||
             address < 0x10000000u ||
-            !pc_paging_map(&xbox_page_tables, address, address,
-                           PC_PAGING_PAGE_SIZE,
-                           PC_PAGING_WRITE | PC_PAGING_PWT | PC_PAGING_PCD))
+            !pc_paging_map_mmio_identity(&xbox_page_tables, address,
+                PC_PAGING_PAGE_SIZE, &mapped_base, &mapped_length) ||
+            mapped_base != address || mapped_length != PC_PAGING_PAGE_SIZE)
             return 0;
     }
     return 1;
