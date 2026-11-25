@@ -72,3 +72,10 @@ The existing Intel module still performs PCI discovery/classification only. No i
 Added `pc_intel_gen9.h/.c` as a deliberately narrow backend boundary. It accepts only discovered Intel VGA devices classified as Gen9, requires a caller-supplied mapping of at least 4 KiB, and provides aligned, bounds-checked 32-bit MMIO reads. The module performs no PCI writes, no BAR mapping, no GT power changes, no forcewake writes, and no command submission. Unit tests use a fake memory array to validate the access boundary and reject other GPU generations.
 
 This is not yet a hardware probe: no real mapping is supplied by the current HAL, whose `map_mmio` callback remains unsupported. The next prerequisite is a real page-table/MMIO mapping lifecycle and a validated BAR aperture size; only after that can a hardware read-only probe be enabled. Gen9 GT registers may require forcewake/power-domain sequencing, as documented by Intel and handled by i915; the caller must not read those registers before that sequence is implemented.
+
+
+## Uncached MMIO page-mapping primitive
+
+The PC page-table builder now exposes `pc_paging_map_mmio_identity`. It accepts a 64-bit physical base and length, rejects zero-length, overflow, and ranges outside the 32-bit non-PAE address space, rounds the range out to 4 KiB pages, and creates an identity mapping with writable + cache-disable + write-through PTE flags. The firmware LAPIC/IOAPIC page-table preparation now uses this common helper. Host tests cover unaligned ranges, page-boundary crossing, translation results, cache flags, and rejection of out-of-range inputs.
+
+This is still only page-table construction: the current harness deliberately keeps paging disabled, so the returned virtual addresses must not be dereferenced yet. The native HAL `map_mmio` callback remains unsupported. A real Intel BAR mapping still requires a trustworthy aperture length, physical-range reservation, a paging activation/identity-preservation plan, and safe GT power/forcewake sequencing. No Intel GPU register access is enabled by this change.
