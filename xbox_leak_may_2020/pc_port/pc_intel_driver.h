@@ -11,7 +11,6 @@ typedef enum pc_intel_driver_state {
 } pc_intel_driver_state;
 
 typedef struct pc_intel_driver {
-    i915_winhal_context *unused_compat_context;
     pc_intel_gpu_info gpu;
     pc_pci_device pci;
     pc_intel_driver_state state;
