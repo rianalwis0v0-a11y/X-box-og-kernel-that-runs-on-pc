@@ -68,6 +68,10 @@ jobs:
         run: gcc -std=c11 -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port xbox_leak_may_2020/pc_port/pc_hal_contract.c xbox_leak_may_2020/pc_port/i915_winhal_compat.c xbox_leak_may_2020/pc_port/test_i915_winhal_compat.c -o /tmp/i915-winhal-shim-tests && /tmp/i915-winhal-shim-tests
       - name: Compile i915 compatibility shim for freestanding x86
         run: gcc -m32 -std=c11 -ffreestanding -fno-builtin -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port -fsyntax-only xbox_leak_may_2020/pc_port/i915_winhal_compat.c
+      - name: Test built-in Intel driver startup through PC HAL
+        run: gcc -std=c11 -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port xbox_leak_may_2020/pc_port/pc_hal_contract.c xbox_leak_may_2020/pc_port/i915_winhal_compat.c xbox_leak_may_2020/pc_port/pc_pci.c xbox_leak_may_2020/pc_port/pc_intel_gpu.c xbox_leak_may_2020/pc_port/pc_intel_driver.c xbox_leak_may_2020/pc_port/test_pc_intel_driver.c -o /tmp/pc-intel-driver-tests && /tmp/pc-intel-driver-tests
+      - name: Compile built-in Intel driver for freestanding x86
+        run: gcc -m32 -std=c11 -ffreestanding -fno-builtin -Wall -Wextra -Werror -Ixbox_leak_may_2020/pc_port -fsyntax-only xbox_leak_may_2020/pc_port/pc_intel_driver.c
       - name: Install toolchain and emulator
         run: |
           sudo apt-get update
@@ -123,6 +127,7 @@ jobs:
           grep -F "PC-HAL: CPU vendor" qemu.log
           grep -F "PC-HAL: PCI device " qemu.log
           grep -F "PC-HAL: PCI functions found=" qemu.log
+          grep -F "I915: target Intel UHD 610 PCI device not present" qemu.log
           grep -F "PC-HAL: physical allocator PASS page=" qemu.log
           grep -F "PC-HAL: Xbox 256 MiB identity + 0x80000000 alias tables verified (paging OFF)" qemu.log
           grep -F "PC-HAL: firmware LAPIC/IOAPIC MMIO mappings prepared uncached (paging active)" qemu.log
