@@ -479,7 +479,7 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
     PcIdtInstallExceptions();
     serial_write("PC-HAL: exception IDT installed (vectors 0-31)\n");
     if (pc_hal_validate(PcHalNativeGetOps()) == PC_STATUS_OK) {
-        serial_write("PC-HAL: native backend ABI contract PASS (PCI + PIC/PIT; MMIO unsupported)\n");
+        serial_write("PC-HAL: native backend ABI contract PASS (PCI + PIC/PIT; MMIO waits for live paging)\n");
     } else {
         serial_write("PC-HAL: native backend ABI contract ERROR\n");
         for (;;) __asm__ volatile ("cli; hlt");
@@ -562,6 +562,7 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
                                 serial_write("PC-HAL: paging activation refused; execution outside identity map\n");
                             } else if (activate_pc_paging(block)) {
                                 serial_write("PC-HAL: paging activated; identity-map execution check PASS\n");
+                                PcHalNativeSetPagingContext(&xbox_page_tables);
                             } else {
                                 serial_write("PC-HAL: paging activation refused or failed\n");
                             }
