@@ -49,7 +49,9 @@ pc_hal_contract.o: pc_hal_contract.c include/pc_hal.h | check-tools
 	$(CC) $(CFLAGS) -c $< -o $@
 
 pc_hal_native_backend.o: pc_hal_native_backend.c pc_hal_native_backend.h include/pc_hal.h pc_hal_native.h pc_irq.h | check-tools
-\t$(CC) $(CFLAGS) -c $< -o $@\n\ni915_winhal_compat.o: i915_winhal_compat.c i915_winhal_compat.h include/pc_hal.h | check-tools\n\t$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
+
+i915_winhal_compat.o: i915_winhal_compat.c i915_winhal_compat.h include/pc_hal.h | check-tools
 	$(CC) $(CFLAGS) -c $< -o $@
 
 nv2a_vertex_shader.o: nv2a_vertex_shader.c nv2a_vertex_shader.h | check-tools
