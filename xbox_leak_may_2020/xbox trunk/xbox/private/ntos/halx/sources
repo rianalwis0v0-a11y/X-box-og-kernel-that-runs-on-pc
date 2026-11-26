@@ -47,6 +47,12 @@ C_DEFINES=$(C_DEFINES) -DPC_COMPAT_NATIVE
 !ERROR PC_COMPAT_GUEST and PC_COMPAT_NATIVE are mutually exclusive
 !ENDIF
 
+# This repository's default target is a PC-running Xbox kernel.
+# Preserve the original console HAL only when explicitly requested.
+!IF "$(PC_COMPAT_GUEST)" != "1" && "$(PC_COMPAT_NATIVE)" != "1" && "$(PC_COMPAT_XBOX)" != "1"
+C_DEFINES=$(C_DEFINES) -DPC_COMPAT_NATIVE
+!ENDIF
+
 SOURCES=
 
 i386_SOURCES=i386\ixclock.asm  \
