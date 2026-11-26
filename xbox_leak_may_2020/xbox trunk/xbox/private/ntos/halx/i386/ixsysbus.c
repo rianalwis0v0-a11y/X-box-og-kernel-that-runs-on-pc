@@ -36,6 +36,19 @@ Return Value:
 {
     ULONG SystemVector;
 
+#if defined(PC_COMPAT_NATIVE)
+    /*
+     * A legacy dual-8259 PC exposes only IRQ0..IRQ15.  The generic Xbox
+     * HAL's HIGHEST_LEVEL_FOR_8259 constant is an IRQL limit, not a count
+     * of physical PIC inputs.  Reject out-of-range bus levels before
+     * converting them to vectors, rather than manufacturing vectors for
+     * nonexistent PIC inputs.
+     */
+    if (BusInterruptLevel >= PIC_VECTORS) {
+        return(0);
+    }
+#endif
+
     SystemVector = BusInterruptLevel + PRIMARY_VECTOR_BASE;
 
     if ((SystemVector < PRIMARY_VECTOR_BASE) ||
