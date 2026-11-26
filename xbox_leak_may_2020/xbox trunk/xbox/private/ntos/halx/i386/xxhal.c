@@ -69,7 +69,7 @@ Return Value:
      * Full MADT IOAPIC/LAPIC routing is a separate required integration
      * before enabling this mode on APIC-only or x2APIC-only machines.
      */
-    HalpInitializePICs();
+    HalpInitializePICsPreserveFlags();
     HalpInitializeRealTimeClock();
     HalpInitializeClock();
     HalStopProfileInterrupt(0);
@@ -166,7 +166,7 @@ Return Value:
         KeBugCheck(0x50434841);
     }
 #elif defined(PC_COMPAT_NATIVE)
-    HalpInitializePICs();
+    HalpInitializePICsPreserveFlags();
 #else
     HalPulseHardwareMonitorPin();
     HalpInitializePICs();
