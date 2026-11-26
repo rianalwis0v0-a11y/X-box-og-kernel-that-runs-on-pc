@@ -1124,8 +1124,9 @@ Hip10:  movzx   edx, ax
 stdENDP _HalpInitializePICs
 
 ;
-; PC-native early initialization variant. Preserve the caller's IF state:
-; the PC HAL installs IDT handlers later in HalInitSystemPhase1.
+; PC-native early initialization variant. Preserve the caller's
+; non-IF flags, but leave maskable interrupts disabled: the PC HAL installs
+; IDT handlers later in HalInitSystemPhase1.
 ;
 cPublicProc _HalpInitializePICsPreserveFlags, 0
 cPublicFpo 0, 0
@@ -1153,6 +1154,7 @@ Hip20:  movzx   edx, ax
         jne     short Hip20
 
         popfd
+        cli                                     ; never expose an unready IDT
         pop     esi
         stdRET    _HalpInitializePICsPreserveFlags
 stdENDP _HalpInitializePICsPreserveFlags
