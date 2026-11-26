@@ -96,6 +96,11 @@ HalpInitializePICs(
     );
 
 VOID
+HalpInitializePICsPreserveFlags(
+    VOID
+    );
+
+VOID
 HalpInitializeRealTimeClock(
     VOID
     );
