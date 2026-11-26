@@ -15,6 +15,16 @@ Abstract:
 --*/
 
 #include "halp.h"
+
+/*
+ * These are mutually exclusive platform backends.  Combining them would
+ * select guest initialization in some paths and native port-I/O routines
+ * in others, producing a HAL with contradictory hardware ownership.
+ */
+#if defined(PC_COMPAT_GUEST) && defined(PC_COMPAT_NATIVE)
+#error PC_COMPAT_GUEST and PC_COMPAT_NATIVE cannot be enabled together
+#endif
+
 #ifdef PC_COMPAT_GUEST
 #include "pc_hal_guest.h"
 #endif
