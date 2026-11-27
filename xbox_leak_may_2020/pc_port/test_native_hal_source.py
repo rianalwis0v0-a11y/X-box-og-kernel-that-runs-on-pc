@@ -76,6 +76,27 @@ class NativeXboxHalSourceTests(unittest.TestCase):
             kernel.index("PcHalNativeSetPagingContext(&xbox_page_tables);"),
         )
 
+    def test_pc_pic_backend_preserves_if_and_handles_spurious_irq7_irq15(self):
+        irq = (Path(__file__).resolve().parent / "pc_irq.c").read_text(encoding="utf-8")
+        self.assertIn("if (flags & 0x200u) PcHalNativeEnableInterrupts();", irq)
+        self.assertIn("PIC_OCW3_READ_ISR", irq)
+        self.assertIn("if (irq == 7u)", irq)
+        self.assertIn("if (irq == 15u)", irq)
+        self.assertIn("PcHalNativeOut8(PIC1_CMD, 0x20u);", irq)
+        self.assertIn("gsi == PIC_MASTER_CASCADE_IRQ", irq)
+        self.assertIn("g_pit_divisor", irq)
+        self.assertIn("1000000000ull", irq)
+
+    def test_harness_enables_interrupts_only_for_pit_self_test(self):
+        source = (Path(__file__).resolve().parent / "kernel.c").read_text(encoding="utf-8")
+        pit = source.index("PcIrqInstallPit(100u);")
+        enable = source.rfind("PcHalNativeEnableInterrupts();", 0, pit)
+        stop = source.index("PcIrqStop();", pit)
+        disable = source.index("PcHalNativeDisableInterrupts();", stop)
+        self.assertGreater(enable, 0)
+        self.assertLess(enable, pit)
+        self.assertGreater(disable, stop)
+
     def test_pci_config_access_restores_the_callers_interrupt_flag(self):
         source = (HAL / "i386" / "pcispace.c").read_text(encoding="utf-8")
         self.assertIn("pushfd", source)
