@@ -85,7 +85,8 @@ class NativeXboxHalSourceTests(unittest.TestCase):
         self.assertIn("PcHalNativeOut8(PIC1_CMD, 0x20u);", irq)
         self.assertIn("gsi == PIC_MASTER_CASCADE_IRQ", irq)
         self.assertIn("g_pit_divisor", irq)
-        self.assertIn("1000000000ull", irq)
+        self.assertIn("g_tick_period_ns", irq)
+        self.assertIn("(uint64_t)g_ticks * (uint64_t)g_tick_period_ns", irq)
 
     def test_harness_enables_interrupts_only_for_pit_self_test(self):
         source = (Path(__file__).resolve().parent / "kernel.c").read_text(encoding="utf-8")
