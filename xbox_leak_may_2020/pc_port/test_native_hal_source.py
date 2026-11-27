@@ -134,7 +134,7 @@ class NativeXboxHalSourceTests(unittest.TestCase):
     def test_native_pc_kernel_entry_does_not_require_xbox_rom_keys_or_bldr_memory(self):
         init = HAL.parent / "init"
         entry = (init / "xboxkrnl.c").read_text(encoding="utf-8")
-        native = entry.split("#if !defined(PC_COMPAT_NATIVE)", 1)[1].split("#endif", 1)[0]
+        native = entry.split("#else", 1)[1].split("#endif", 1)[0]
         self.assertIn("(void)CryptKeys;", native)
         self.assertIn("(void)LoadOptions;", native)
         self.assertNotIn("RtlCopyMemory(XboxEEPROMKey", native)
