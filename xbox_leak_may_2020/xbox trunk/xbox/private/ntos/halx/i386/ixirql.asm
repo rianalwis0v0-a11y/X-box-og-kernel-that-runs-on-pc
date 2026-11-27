@@ -1117,7 +1117,12 @@ Hip10:  movzx   edx, ax
         cmp     ax, 0                           ; end of init string?
         jne     short Hip10                     ; go init next PIC
 
-        or      [esp], EFLAGS_INTERRUPT_MASK    ; enable interrupts
+IFDEF PC_COMPAT_NATIVE
+        ; Native PC initialization must not enable interrupts before the
+        ; kernel has installed its IDT handlers. Preserve the caller's IF.
+ELSE
+        or      [esp], EFLAGS_INTERRUPT_MASK    ; preserve legacy Xbox behavior
+ENDIF
         popfd
         pop     esi                             ; restore caller's esi
         stdRET    _HalpInitializePICs
