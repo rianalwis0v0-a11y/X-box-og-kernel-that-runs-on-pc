@@ -99,6 +99,16 @@ class NativeXboxHalSourceTests(unittest.TestCase):
         self.assertGreater(disable, stop)
 
 
+    def test_native_pic_initialization_does_not_enable_if_early(self):
+        source = (HAL / "i386" / "ixirql.asm").read_text(encoding="utf-8")
+        init = source.split("cPublicProc _HalpInitializePICs", 1)[1].split("stdENDP _HalpInitializePICs", 1)[0]
+        self.assertIn("pushfd", init)
+        self.assertIn("cli", init)
+        self.assertIn("IFDEF PC_COMPAT_NATIVE", init)
+        self.assertIn("or      [esp], EFLAGS_INTERRUPT_MASK", init)
+        self.assertIn("ENDIF", init)
+        self.assertLess(init.index("IFDEF PC_COMPAT_NATIVE"), init.index("or      [esp], EFLAGS_INTERRUPT_MASK"))
+
     def test_original_xbox_hal_pic_mask_operations_preserve_if(self):
         source = (HAL / "i386" / "ixsysint.asm").read_text(encoding="utf-8")
         disable = source.split("cPublicProc _HalDisableSystemInterrupt", 1)[1].split("stdENDP _HalDisableSystemInterrupt", 1)[0]
