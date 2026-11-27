@@ -57,8 +57,9 @@ main(
         XboxBootFlags |= XBOX_BOOTFLAG_DASHBOARDBOOT;
 #endif
 
+#if !defined(PC_COMPAT_NATIVE)
     //
-    // Save the encryption keys that have been passed in from the boot loader.
+    // Save the encryption keys that have been passed in from the Xbox boot loader.
     //
 
     RtlCopyMemory(XboxEEPROMKey, CryptKeys, XBOX_KEY_LENGTH);
@@ -72,6 +73,13 @@ main(
 
     RtlZeroMemory((PUCHAR)MM_SYSTEM_RANGE_START + BLDR_RELOCATED_ORIGIN,
         BLDR_BLOCK_SIZE);
+#else
+    // A PC loader has no Xbox ROM-derived keys or relocated Xbox bootloader.
+    // Leave the zero-initialized Xbox key globals untouched; never dereference
+    // a fabricated CryptKeys pointer or clear an unrelated PC physical range.
+    (void)LoadOptions;
+    (void)CryptKeys;
+#endif
 
     //
     // Initialize the system.
