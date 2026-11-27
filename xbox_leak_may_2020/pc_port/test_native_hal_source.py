@@ -131,5 +131,34 @@ class NativeXboxHalSourceTests(unittest.TestCase):
         self.assertNotIn("    _enable();\r\n}", source)
 
 
+    def test_native_pc_kernel_entry_does_not_require_xbox_rom_keys_or_bldr_memory(self):
+        init = HAL.parent / "init"
+        entry = (init / "xboxkrnl.c").read_text(encoding="utf-8")
+        native = entry.split("#if !defined(PC_COMPAT_NATIVE)", 1)[1].split("#endif", 1)[0]
+        self.assertIn("(void)CryptKeys;", native)
+        self.assertIn("(void)LoadOptions;", native)
+        self.assertNotIn("RtlCopyMemory(XboxEEPROMKey", native)
+        self.assertNotIn("RtlZeroMemory(", native)
+        self.assertIn("#if defined(DEVKIT) && !defined(PC_COMPAT_NATIVE)", entry)
+
+    def test_native_pc_kernel_phase_one_skips_xbox_board_and_title_paths(self):
+        init = HAL.parent / "init"
+        source = (init / "init.c").read_text(encoding="utf-8")
+        phase = source.split("Phase1Initialization(", 1)[1]
+        xbox_path = phase.split("#if !defined(PC_COMPAT_NATIVE)", 1)[1].split("#endif // !PC_COMPAT_NATIVE", 1)[0]
+        for token in ("HalReadPCISpace(", "ExpDecryptEEPROM();", "HalBlockIfNoAVPack();",
+                      "IdexChannelCreate();", "XeLoadDashboardImage", "HalWriteSMBusByte("):
+            self.assertIn(token, xbox_path)
+        self.assertIn("PC_COMPAT_NATIVE: Xbox kernel phase 1 reached; XBE launch deferred.", phase)
+        self.assertIn("MmRelocatePersistentMemory();", phase)
+
+    def test_native_pc_define_is_applied_to_the_kernel_init_library(self):
+        init = HAL.parent / "init"
+        sources = (init / "sources.inc").read_text(encoding="utf-8")
+        self.assertIn('!IF "$(PC_COMPAT_NATIVE)" == "1"', sources)
+        self.assertIn("C_DEFINES=$(C_DEFINES) -DPC_COMPAT_NATIVE", sources)
+
+
+
 if __name__ == "__main__":
     unittest.main()
