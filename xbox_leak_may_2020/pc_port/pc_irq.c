@@ -19,6 +19,7 @@ typedef struct pc_irq_slot {
 
 static volatile uint32_t g_ticks;
 static uint32_t g_pit_divisor;
+static uint32_t g_tick_period_ns;
 static uint8_t g_pic_master_mask = 0xffu;
 static uint8_t g_pic_slave_mask = 0xffu;
 static pc_irq_slot g_handlers[PIC_IRQ_COUNT];
@@ -65,6 +66,7 @@ void PcIrqInstallPit(uint32_t frequency_hz)
 
     g_ticks = 0;
     g_pit_divisor = divisor;
+    g_tick_period_ns = 1000000000u / (PIT_INPUT_HZ / divisor);
     g_pic_master_mask = 0xffu;
     g_pic_slave_mask = 0xffu;
     for (i = 0; i < PIC_IRQ_COUNT; ++i) {
@@ -92,10 +94,8 @@ uint32_t PcIrqFrequencyHz(void)
 
 uint64_t PcIrqMonotonicTimeNs(void)
 {
-    if (!g_pit_divisor) return 0u;
-    /* Keep the fractional PIT period; avoid accumulating rounded-ns drift. */
-    return ((uint64_t)g_ticks * (uint64_t)g_pit_divisor * 1000000000ull) /
-           PIT_INPUT_HZ;
+    /* 64-bit multiply only: this freestanding target has no libgcc division. */
+    return (uint64_t)g_ticks * (uint64_t)g_tick_period_ns;
 }
 
 int PcIrqSleepNs(uint64_t duration_ns)
@@ -156,6 +156,7 @@ void PcIrqStop(void)
     g_pic_slave_mask = 0xffu;
     pic_write_masks();
     g_pit_divisor = 0u;
+    g_tick_period_ns = 0u;
 }
 
 /* Read the in-service register to distinguish real IRQ7/IRQ15 from spurious IRQs. */
