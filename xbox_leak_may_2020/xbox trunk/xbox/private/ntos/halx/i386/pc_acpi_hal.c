@@ -29,7 +29,8 @@ HalpMapPhysicalRange(ULONG Address, SIZE_T Length)
     SIZE_T MapLength;
     PVOID Mapping;
 
-    if (Length == 0 || Length > (1024 * 1024)) return NULL;
+    if (Address == 0 || Length == 0 || Length > (1024 * 1024) ||
+        Length > 0xffffffffu - Address) return NULL;
     Offset = Address & (PAGE_SIZE - 1);
     if (Length > ((SIZE_T)-1) - Offset - (PAGE_SIZE - 1)) return NULL;
     MapLength = (Length + Offset + PAGE_SIZE - 1) & HALP_PAGE_MASK;
@@ -103,11 +104,17 @@ FoundRsdp:
      * the local APIC or unmask IOAPIC inputs here: ixsysint.asm currently
      * performs PIC-specific EOI and IRQL masking operations.
      */
+    if (HalpPcAcpiMadtInfo.local_apic_address == 0 ||
+        (HalpPcAcpiMadtInfo.local_apic_address & (PAGE_SIZE - 1)) != 0)
+        return FALSE;
     HalpPcLocalApicMapping = HalpMapPhysicalRange(
         HalpPcAcpiMadtInfo.local_apic_address, PAGE_SIZE);
     if (HalpPcLocalApicMapping == NULL) return FALSE;
 
     for (Index = 0; Index < HalpPcAcpiMadtInfo.ioapic_count; ++Index) {
+        if (HalpPcAcpiMadtInfo.ioapics[Index].address == 0 ||
+            (HalpPcAcpiMadtInfo.ioapics[Index].address & (PAGE_SIZE - 1)) != 0)
+            return FALSE;
         HalpPcIoApicMappings[Index] = HalpMapPhysicalRange(
             HalpPcAcpiMadtInfo.ioapics[Index].address, PAGE_SIZE);
         if (HalpPcIoApicMappings[Index] == NULL) return FALSE;
