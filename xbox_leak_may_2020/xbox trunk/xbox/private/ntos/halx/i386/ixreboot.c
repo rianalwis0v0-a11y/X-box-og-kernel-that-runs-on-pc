@@ -57,9 +57,11 @@ Routine Description:
     // reset.
     //
 
+#if !defined(PC_COMPAT_NATIVE) && !defined(PC_COMPAT_GUEST)
     if (KeGetCurrentIrql() < DISPATCH_LEVEL) {
         HalWriteSMBusByte(SMC_SLAVE_ADDRESS, SMC_COMMAND_RESET, SMC_RESET_ASSERT_RESET);
     }
+#endif
 
     //
     // Poke the south bridge to do a full PCI reset.
@@ -128,10 +130,12 @@ Return Value:
         // immediately display the message when the kernel boots again.
         //
 
+#if !defined(PC_COMPAT_NATIVE) && !defined(PC_COMPAT_GUEST)
         if (Routine == HalFatalErrorRebootRoutine) {
             HalWriteSMBusByte(SMC_SLAVE_ADDRESS, SMC_COMMAND_SCRATCH,
                 SMC_SCRATCH_DISPLAY_FATAL_ERROR);
         }
+#endif
 
 #ifdef DEVKIT
         //
@@ -189,7 +193,7 @@ Return Value:
         ShutdownRegistration->NotificationRoutine(ShutdownRegistration);
     }
 
-#if DBG
+#if DBG && !defined(PC_COMPAT_NATIVE) && !defined(PC_COMPAT_GUEST)
     //
     // Notify the IDE driver that we're about to quick reboot the system.  The
     // driver will verify that no requests are pending and that all further
