@@ -77,11 +77,12 @@ HalpPcAcpiInitialize(VOID)
     HalpAcpiMappingCount = 0;
 
     /* The EBDA segment pointer is stored at physical 0x40E. */
-    Physical.QuadPart = 0x400;
+    /* MmMapIoSpace requires a page-aligned physical base. */
+    Physical.QuadPart = 0;
     LowMemory = (PUCHAR)MmMapIoSpace(Physical, PAGE_SIZE, MmNonCached);
     if (LowMemory != NULL) {
         HalpAcpiMappings[HalpAcpiMappingCount++] = LowMemory;
-        EbdaSegment = *(volatile PUSHORT)(LowMemory + 0x0e);
+        EbdaSegment = *(volatile PUSHORT)(LowMemory + 0x40e);
         if (EbdaSegment >= 0x8000 && EbdaSegment < 0xa000) {
             Ebda = (PUCHAR)HalpMapPhysicalRange((ULONG)EbdaSegment << 4, 1024);
             if (Ebda != NULL && PcAcpiFindRsdp(Ebda, 1024, &Rsdp, NULL))
