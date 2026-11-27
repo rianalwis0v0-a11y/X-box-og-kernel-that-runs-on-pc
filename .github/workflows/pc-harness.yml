@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "xbox_leak_may_2020/pc_port/**"
+      - "xbox_leak_may_2020/xbox trunk/xbox/private/ntos/halx/**"
       - ".github/workflows/pc-harness.yml"
   pull_request:
     paths:
