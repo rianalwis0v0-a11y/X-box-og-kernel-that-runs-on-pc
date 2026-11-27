@@ -98,6 +98,20 @@ class NativeXboxHalSourceTests(unittest.TestCase):
         self.assertLess(enable, pit)
         self.assertGreater(disable, stop)
 
+
+    def test_original_xbox_hal_pic_mask_operations_preserve_if(self):
+        source = (HAL / "i386" / "ixsysint.asm").read_text(encoding="utf-8")
+        disable = source.split("cPublicProc _HalDisableSystemInterrupt", 1)[1].split("stdENDP _HalDisableSystemInterrupt", 1)[0]
+        enable = source.split("cPublicProc _HalEnableSystemInterrupt", 1)[1].split("stdENDP _HalEnableSystemInterrupt", 1)[0]
+        self.assertIn("pushfd", disable)
+        self.assertIn("cli", disable)
+        self.assertIn("popfd", disable)
+        self.assertNotIn("sti", disable)
+        self.assertIn("pushfd", enable)
+        self.assertIn("cli", enable)
+        self.assertIn("popfd", enable)
+        self.assertNotIn("sti", enable)
+
     def test_pci_config_access_restores_the_callers_interrupt_flag(self):
         source = (HAL / "i386" / "pcispace.c").read_text(encoding="utf-8")
         self.assertIn("pushfd", source)
