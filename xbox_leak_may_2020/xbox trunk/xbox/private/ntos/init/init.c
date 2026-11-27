@@ -800,12 +800,14 @@ Phase1Initialization(
     IN PVOID Context
     )
 {
+#if !defined(PC_COMPAT_NATIVE)
     NTSTATUS status;
+    ULONG SettingsError;
+#endif
     LARGE_INTEGER UniversalTime;
     LARGE_INTEGER CmosTime;
     LARGE_INTEGER OldTime;
     TIME_FIELDS TimeFields;
-    ULONG SettingsError;
 
     //
     // Initialize the Hardware Architecture Layer (HAL).
@@ -836,6 +838,7 @@ Phase1Initialization(
         KeBootTimeBias = 0;
     }
 
+#if !defined(PC_COMPAT_NATIVE)
     //
     // Read the MCPX revision number.
     //
@@ -1015,6 +1018,8 @@ Phase1Initialization(
         MmDiscardInitSection();
     }
 
+#endif // !PC_COMPAT_NATIVE
+
     //
     // Relocate persistent contiguous memory allocations in order to present
     // roughly the same physical memory layout to an XBE image.
@@ -1022,11 +1027,18 @@ Phase1Initialization(
 
     MmRelocatePersistentMemory();
 
+#if !defined(PC_COMPAT_NATIVE)
     //
     // Invoke the entry point of the XBE image.
     //
 
     XeImageHeader()->AddressOfEntryPoint();
+#else
+    // The first PC milestone is kernel phase-1 initialization only. No Xbox
+    // storage stack or XBE loader is available yet, so return cleanly rather
+    // than dereferencing an absent title image.
+    DbgPrint("PC_COMPAT_NATIVE: Xbox kernel phase 1 reached; XBE launch deferred.\\n");
+#endif
 
     //
     // The XBE startup code runs the main title thread on a new thread, so
