@@ -386,6 +386,7 @@ cPublicProc _HalDisableSystemInterrupt      ,1
         movzx   ecx, byte ptr [esp+4]       ; (ecx) = 8259 irq #
         mov     edx, 1
         shl     edx, cl                     ; (ebx) = bit in IMR to disable
+        pushfd                              ; preserve caller's interrupt state
         cli
         or      HalpIDR, edx
         xor     eax, eax
@@ -408,7 +409,7 @@ cPublicProc _HalDisableSystemInterrupt      ,1
         out     PIC2_PORT1, al
         PIC2DELAY
 
-        sti
+        popfd                               ; restore caller's interrupt state
         stdRET    _HalDisableSystemInterrupt
 
 stdENDP _HalDisableSystemInterrupt
@@ -438,12 +439,14 @@ cPublicProc _HalEnableSystemInterrupt       ,2
 .FPO ( 0, 2, 0, 0, 0, 0 )
 
         movzx   ecx, byte ptr [esp+4]       ; (ecx) = 8259 irq #
+        mov     al, [esp+8]                   ; save requested trigger mode
+        pushfd                              ; preserve caller's interrupt state
+        cli
 
 ;
 ; Clear or set the edge\level mask bit depending on what the caller wants.
 ;
         btr     HalpEisaELCR, ecx
-        mov     al, [esp+8]
         cmp     al, 0
         jnz     short hes_edge
 
@@ -471,7 +474,6 @@ hes_ProgPIC:
         shl     eax, cl                         ; (ebx) = bit in IMR to enable
         not     eax
 
-        cli
         and     HalpIDR, eax
 
 ;
@@ -484,7 +486,7 @@ hes_ProgPIC:
 ;
         SET_8259_MASK
 
-        sti
+        popfd                               ; restore caller's interrupt state
         stdRET    _HalEnableSystemInterrupt
 
 stdENDP _HalEnableSystemInterrupt
