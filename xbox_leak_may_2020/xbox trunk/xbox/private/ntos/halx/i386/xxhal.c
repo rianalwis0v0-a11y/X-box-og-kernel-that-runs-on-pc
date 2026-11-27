@@ -72,14 +72,15 @@ Return Value:
     /*
      * Native legacy-PC path: keep the Xbox NT HAL's x86 hardware routines,
      * but do not touch Xbox LPC/MCPX registers or force-disable the PC APIC.
-     * HalpInitializePICs uses the existing 0x30/0x38 NT vector convention;
+     * HalpInitializePICsPreserveFlags keeps IF clear until the IDT is ready;
+     * the existing 0x30/0x38 NT vector convention is retained;
      * the clock implementation is the standard 8254 PIT channel-0 path.
      *
      * This mode is for firmware exposing legacy PIC compatibility only.
      * Full MADT IOAPIC/LAPIC routing is a separate required integration
      * before enabling this mode on APIC-only or x2APIC-only machines.
      */
-    HalpInitializePICs();
+    HalpInitializePICsPreserveFlags();
     HalpInitializeRealTimeClock();
     HalpInitializeClock();
     HalStopProfileInterrupt(0);
@@ -176,7 +177,7 @@ Return Value:
         KeBugCheck(0x50434841);
     }
 #elif defined(PC_COMPAT_NATIVE)
-    HalpInitializePICs();
+    HalpInitializePICsPreserveFlags();
 #else
     HalPulseHardwareMonitorPin();
     HalpInitializePICs();
