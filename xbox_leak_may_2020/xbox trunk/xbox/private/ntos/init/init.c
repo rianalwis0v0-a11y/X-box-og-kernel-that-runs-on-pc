@@ -1037,7 +1037,7 @@ Phase1Initialization(
     // The first PC milestone is kernel phase-1 initialization only. No Xbox
     // storage stack or XBE loader is available yet, so return cleanly rather
     // than dereferencing an absent title image.
-    DbgPrint("PC_COMPAT_NATIVE: Xbox kernel phase 1 reached; XBE launch deferred.\\n");
+    DbgPrint("PC_COMPAT_NATIVE: Xbox kernel phase 1 reached; XBE launch deferred.\n");
 #endif
 
     //
