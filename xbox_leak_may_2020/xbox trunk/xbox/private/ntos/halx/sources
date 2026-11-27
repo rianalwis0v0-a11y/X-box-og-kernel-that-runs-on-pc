@@ -55,7 +55,9 @@ C_DEFINES=$(C_DEFINES) -DPC_COMPAT_NATIVE
 
 SOURCES=
 
-i386_SOURCES=i386\ixclock.asm  \
+i386_SOURCES=..\..\..\..\..\pc_port\pc_acpi.c \
+             i386\pc_acpi_hal.c \
+             i386\ixclock.asm  \
              i386\ixcmos.asm   \
              i386\ixirql.asm   \
              i386\ixnmi.c      \
