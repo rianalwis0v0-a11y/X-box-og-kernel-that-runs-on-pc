@@ -33,7 +33,7 @@ main(
     IN const UCHAR* CryptKeys
     )
 {
-#ifdef DEVKIT
+#if defined(DEVKIT) && !defined(PC_COMPAT_NATIVE)
     //
     // Copy the load options from the boot loader to a local buffer and then
     // parse the various options and convert them to boot flags.
