@@ -649,9 +649,12 @@ void kernel_main(uint32_t multiboot_magic, uint32_t multiboot_info_address) {
         }
     }
     serial_write("PC-HAL: starting PIT IRQ0 timer self-test\n");
+    /* The harness explicitly enables IRQs only after the IDT and PIC are ready. */
+    PcHalNativeEnableInterrupts();
     PcIrqInstallPit(100u);
     PcIrqWaitForTicks(5u);
     PcIrqStop();
+    PcHalNativeDisableInterrupts();
     serial_write("PC-HAL: PIT IRQ0 self-test PASS ticks=");
     serial_hex(PcIrqTicks());
     serial_write("\n");
