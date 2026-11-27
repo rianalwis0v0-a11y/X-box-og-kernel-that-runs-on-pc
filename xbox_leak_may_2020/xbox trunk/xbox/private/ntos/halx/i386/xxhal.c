@@ -16,6 +16,10 @@ Abstract:
 
 #include "halp.h"
 
+#if defined(PC_COMPAT_NATIVE)
+#include "pc_acpi_hal.h"
+#endif
+
 /*
  * These are mutually exclusive platform backends.  Combining them would
  * select guest initialization in some paths and native port-I/O routines
@@ -218,6 +222,9 @@ Return Value:
      * Do not register Xbox SMC/SMBus/SCI sources or the Xbox profile source.
      */
     KiSetHandlerAddressToIDT(CLOCK_VECTOR, KeClockInterrupt);
+    /* Discover ACPI MADT and map APIC registers for the next integration step. */
+    /* Keep the PIC backend active until APIC-aware interrupt dispatch is ready. */
+    (VOID)HalpPcAcpiInitialize();
     HalEnableSystemInterrupt(CLOCK_VECTOR - PRIMARY_VECTOR_BASE, Latched);
 #else
 
